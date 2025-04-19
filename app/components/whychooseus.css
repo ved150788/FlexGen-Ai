@@ -1,0 +1,22 @@
+/* app/components/whychoose.css */
+
+body {
+	background-color: black;
+}
+
+.numbered-title {
+	position: relative;
+	padding-left: 3rem; /* Creates space for the number */
+	font-weight: 700;
+	font-size: 1.125rem; /* ~18px (tailwind text-lg) */
+	color: white; /* Tailwind gray-900 */
+}
+
+.numbered-title::before {
+	content: attr(data-number);
+	position: absolute;
+	left: 0;
+	top: 0;
+	color: white; /* You can change this to match brand color */
+	font-weight: 600;
+}
