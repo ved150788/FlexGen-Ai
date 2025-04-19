@@ -5,12 +5,12 @@ import SharedLayout from "../../components/SharedLayout";
 import { Metadata } from "next";
 import Image from "next/image";
 
-interface Props {
+type PageProps = {
 	params: { slug: string };
-}
+};
 
 // ✅ SEO Metadata
-export function generateMetadata({ params }: Props): Metadata {
+export function generateMetadata({ params }: PageProps): Metadata {
 	const post = blogs.find((b) => b.slug === params.slug);
 	if (!post) return {};
 
@@ -52,7 +52,7 @@ export function generateStaticParams() {
 }
 
 // ✅ Main Page Component
-export default function BlogDetailPage({ params }: Props) {
+export default function BlogDetailPage({ params }: PageProps) {
 	const post = blogs.find((b) => b.slug === params.slug);
 	if (!post) return notFound();
 
@@ -62,7 +62,6 @@ export default function BlogDetailPage({ params }: Props) {
 		{ label: post.title },
 	];
 
-	// ✅ Inject JSON-LD for Article and BreadcrumbList
 	const articleJsonLd = {
 		"@context": "https://schema.org",
 		"@type": "Article",
@@ -103,7 +102,6 @@ export default function BlogDetailPage({ params }: Props) {
 		})),
 	};
 
-	// Related posts
 	const relatedPosts = blogs
 		.filter((b) => b.slug !== post.slug)
 		.filter((b) => b.tags.some((tag) => post.tags.includes(tag)))
@@ -112,7 +110,6 @@ export default function BlogDetailPage({ params }: Props) {
 	return (
 		<SharedLayout>
 			<BreadcrumbLayout breadcrumbItems={breadcrumbItems}>
-				{/* JSON-LD for SEO */}
 				<script
 					type="application/ld+json"
 					dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
@@ -161,7 +158,6 @@ export default function BlogDetailPage({ params }: Props) {
 							</p>
 
 							<div className="markdown-content">
-								{/* If using actual markdown, you would use a markdown renderer here */}
 								<div className="whitespace-pre-line text-gray-800 leading-relaxed">
 									{post.content}
 								</div>
@@ -184,7 +180,6 @@ export default function BlogDetailPage({ params }: Props) {
 							)}
 						</div>
 
-						{/* Author Bio */}
 						<div className="mt-12 pt-8 border-t border-gray-200">
 							<div className="flex items-start space-x-4">
 								<div className="flex-1">
@@ -201,7 +196,6 @@ export default function BlogDetailPage({ params }: Props) {
 							</div>
 						</div>
 
-						{/* Related Posts */}
 						{relatedPosts.length > 0 && (
 							<div className="mt-12 pt-8 border-t border-gray-200">
 								<h3 className="text-2xl font-bold mb-6">Related Articles</h3>
@@ -233,7 +227,6 @@ export default function BlogDetailPage({ params }: Props) {
 							</div>
 						)}
 
-						{/* CTA */}
 						<div className="mt-16 bg-gray-900 text-white p-8 rounded-lg text-center">
 							<h3 className="text-2xl font-bold mb-4">
 								Ready to Enhance Your Cybersecurity?
