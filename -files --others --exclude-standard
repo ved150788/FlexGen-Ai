@@ -1,0 +1,7 @@
+[33mcommit 2ccb225f11daeb35f3b32137e8ed43080fa207dc[m[33m ([m[1;36mHEAD -> [m[1;32mversion3[m[33m, [m[1;31morigin/version2[m[33m, [m[1;32mversion2[m[33m)[m
+Author: Ved Prakash <vedprakash158807@gmail.com>
+Date:   Sat Apr 19 14:37:37 2025 +0530
+
+    Fix image path in TeamCarousel component
+
+app/components/TeamCarousel.tsx

@@ -8,7 +8,7 @@ import Image from "next/image";
 // Remove Tools from separate dropdown and add to main navItems
 const navItems = [
 	{ name: "Home", href: "/" },
-	{ name: "Tools", href: "#", isDropdown: true },
+	{ name: "Tools", href: "/tools", isDropdown: true },
 	{ name: "Services", href: "/services" },
 	{ name: "About", href: "/about" },
 	{ name: "Blogs", href: "/blog" },
@@ -167,6 +167,28 @@ export default function Navbar() {
 
 									{showToolsDropdown && (
 										<div className="absolute top-full right-0 mt-2 w-72 bg-white shadow-lg rounded-md py-1 z-50">
+											{/* Tools Dashboard Link */}
+											<Link
+												href="/tools"
+												className="block px-4 py-3 text-sm font-bold text-primarySaffron hover:bg-gray-50 border-b border-gray-100 flex items-center"
+												onClick={() => setShowToolsDropdown(false)}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													className="h-5 w-5 mr-2"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke="currentColor"
+												>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={2}
+														d="M4 6h16M4 12h16M4 18h7"
+													/>
+												</svg>
+												Tools Dashboard
+											</Link>
 											{toolsCategories.map((category, i) => (
 												<div key={i} className="mb-2">
 													<div className="px-4 py-1 text-xs font-bold uppercase bg-gray-100 text-gray-600">
@@ -256,6 +278,30 @@ export default function Navbar() {
 
 										{showToolsDropdown && (
 											<div className="pl-4 mt-2 space-y-4">
+												{/* Mobile Tools Dashboard Link */}
+												<div className="mb-2">
+													<Link
+														href="/tools"
+														className="flex items-center py-2 font-semibold text-primarySaffron"
+														onClick={() => setShowMobile(false)}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															className="h-4 w-4 mr-2"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke="currentColor"
+														>
+															<path
+																strokeLinecap="round"
+																strokeLinejoin="round"
+																strokeWidth={2}
+																d="M4 6h16M4 12h16M4 18h7"
+															/>
+														</svg>
+														Tools Dashboard
+													</Link>
+												</div>
 												{toolsCategories.map((category, i) => (
 													<div key={i}>
 														<div className="font-semibold text-sm text-gray-600 mb-1">

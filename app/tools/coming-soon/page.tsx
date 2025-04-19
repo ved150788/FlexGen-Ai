@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import SharedLayout from "../../components/SharedLayout";
 import Link from "next/link";
+import NotifyMeForm from "../../components/NotifyMeForm";
 
 // Tool descriptions
 const toolInfo = {
@@ -155,6 +156,29 @@ export default function ComingSoonPage() {
 	return (
 		<SharedLayout>
 			<div className="max-w-5xl mx-auto px-4 py-16">
+				{/* Back to Tools Dashboard Link */}
+				<div className="mb-8">
+					<Link
+						href="/tools"
+						className="inline-flex items-center text-gray-700 hover:text-primarySaffron transition"
+					>
+						<svg
+							className="w-4 h-4 mr-2"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth="2"
+								d="M10 19l-7-7m0 0l7-7m-7 7h18"
+							/>
+						</svg>
+						Back to Tools Dashboard
+					</Link>
+				</div>
+
 				<div className="text-center mb-12">
 					<span className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium mb-3">
 						Under Development
@@ -206,50 +230,37 @@ export default function ComingSoonPage() {
 							<p className="text-sm text-gray-600 mb-4">
 								Be the first to know when this tool is available:
 							</p>
-							<form className="space-y-3">
-								<input
-									type="email"
-									placeholder="Your email address"
-									className="w-full px-4 py-2 border border-gray-300 rounded-md"
-									required
-								/>
-								<button
-									type="submit"
-									className="w-full bg-primarySaffron text-black font-medium py-2 px-4 rounded-md hover:bg-black hover:text-white transition duration-300"
-								>
-									Notify Me
-								</button>
-							</form>
+							<NotifyMeForm toolName={toolName} buttonText="Notify Me" />
 						</div>
 
 						<div className="bg-gray-50 p-6 rounded-lg shadow-md">
 							<h3 className="font-semibold text-lg mb-3 text-gray-800">
-								Explore Our Services
+								Explore Our Tools
 							</h3>
 							<div className="space-y-2">
 								<Link
-									href="/services/risk-assessment"
+									href="/tools?category=Scanning+%26+Assessment"
 									className="block px-4 py-2 bg-white hover:bg-gray-100 rounded-md text-sm transition"
 								>
-									Risk Assessment
+									Scanning & Assessment Tools
 								</Link>
 								<Link
-									href="/services/threat-detection"
+									href="/tools?category=Monitoring"
 									className="block px-4 py-2 bg-white hover:bg-gray-100 rounded-md text-sm transition"
 								>
-									Threat Detection
+									Monitoring Tools
 								</Link>
 								<Link
-									href="/services/penetration-testing"
+									href="/tools?category=Protection"
 									className="block px-4 py-2 bg-white hover:bg-gray-100 rounded-md text-sm transition"
 								>
-									Penetration Testing
+									Protection Tools
 								</Link>
 								<Link
-									href="/services"
+									href="/tools"
 									className="block text-primarySaffron hover:text-black text-sm mt-3 transition"
 								>
-									View all services →
+									View all tools →
 								</Link>
 							</div>
 						</div>
@@ -258,23 +269,24 @@ export default function ComingSoonPage() {
 
 				<div className="mt-12 text-center">
 					<Link
-						href="/"
-						className="inline-flex items-center text-gray-700 hover:text-primarySaffron transition"
+						href="/tools"
+						className="inline-flex items-center justify-center bg-primarySaffron text-black px-5 py-3 rounded-md hover:bg-black hover:text-white transition font-medium"
 					>
 						<svg
-							className="w-4 h-4 mr-2"
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-5 w-5 mr-2"
 							fill="none"
-							stroke="currentColor"
 							viewBox="0 0 24 24"
+							stroke="currentColor"
 						>
 							<path
 								strokeLinecap="round"
 								strokeLinejoin="round"
-								strokeWidth="2"
-								d="M10 19l-7-7m0 0l7-7m-7 7h18"
+								strokeWidth={2}
+								d="M4 6h16M4 12h16M4 18h7"
 							/>
 						</svg>
-						Return to Home
+						Return to Tools Dashboard
 					</Link>
 				</div>
 			</div>
