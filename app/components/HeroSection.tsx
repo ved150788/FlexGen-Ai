@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ModalContactForm from "./ModalContactForm";
+import SecurityAuditCTA from "./SecurityAuditCTA";
 
 export default function HeroSection() {
 	const [isMounted, setIsMounted] = useState(false);
-	const [isOpen, setIsOpen] = useState(false); // ⬅️ local modal state
 
 	useEffect(() => {
 		setIsMounted(true);
@@ -27,7 +26,7 @@ export default function HeroSection() {
 				</video>
 			)}
 
-			<div className="absolute top-0 left-0 w-full h-full bg-black opacity-85 z-10" />
+			<div className="absolute top-0 left-0 w-full h-full bg-black opacity-50 z-10" />
 
 			{/* Hero Content */}
 			<div className="relative top-14 z-20 flex items-start justify-start min-h-screen text-white px-4">
@@ -45,17 +44,15 @@ export default function HeroSection() {
 						penetration testing. Stay secure, stay ahead.
 					</p>
 
-					<button
-						onClick={() => setIsOpen(true)}
-						className="px-6 py-3 font-semibold border border-white rounded-lg transition bg-white text-black hover:bg-black hover:text-white"
-					>
-						Get a Free Security Audit
-					</button>
+					<div className="text-left">
+						<SecurityAuditCTA
+							variant="primary"
+							className="bg-white text-black hover:bg-black hover:text-white"
+							text="Get a Free Security Audit"
+						/>
+					</div>
 				</div>
 			</div>
-
-			{/* Modal Triggered from Local State */}
-			<ModalContactForm isOpen={isOpen} onClose={() => setIsOpen(false)} />
 		</div>
 	);
 }

@@ -5,6 +5,7 @@ import SharedLayout from "../../components/SharedLayout";
 import { Metadata } from "next";
 import Script from "next/script";
 import { siteUrl, siteName } from "../../seo-config";
+import Image from "next/image";
 
 interface Props {
 	params: { slug: string };
@@ -123,9 +124,11 @@ export default function ServiceDetail({ params }: Props) {
 					<article className="max-w-6xl mx-auto px-4 py-12">
 						<header className="mb-12 text-center">
 							<div className="flex justify-center mb-6">
-								<img
+								<Image
 									src={service.icon}
 									alt={service.title}
+									width={80}
+									height={80}
 									className="w-20 h-20"
 								/>
 							</div>

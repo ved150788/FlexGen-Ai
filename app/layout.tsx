@@ -1,14 +1,19 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Lato } from "next/font/google";
 import "./globals.css";
 import { ModalProvider } from "./context/ModalProvider";
 import { defaultMetadata } from "./seo-config";
 
-const poppins = Poppins({
+// Import Swiper styles globally
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+
+const lato = Lato({
 	subsets: ["latin"],
-	weight: ["400", "500", "600", "700"],
-	variable: "--font-poppins",
+	weight: ["100", "300", "400", "700", "900"],
+	variable: "--font-lato",
 	display: "swap",
 });
 
@@ -26,7 +31,10 @@ export default function RootLayout({
 				<link rel="apple-touch-icon" href="/apple-icon.png" />
 				<meta name="theme-color" content="#111111" />
 			</head>
-			<body className={`${poppins.variable} font-sans antialiased`}>
+			<body
+				className={`${lato.variable} font-sans antialiased`}
+				suppressHydrationWarning={true}
+			>
 				<ModalProvider>
 					{children}
 					{/* Modal is handled by the ModalProvider */}

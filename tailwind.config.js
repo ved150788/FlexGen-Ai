@@ -7,7 +7,12 @@ module.exports = {
 		"./node_modules/swiper/**/*.{js,ts,jsx,tsx}",
 	],
 	theme: {
-		extend: {},
+		extend: {
+			colors: {
+				primarySaffron: "#F4A261",
+				primaryBlue: "#264653",
+			},
+		},
 	},
 	plugins: [],
 };

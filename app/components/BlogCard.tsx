@@ -1,13 +1,16 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function BlogCard({ post }: { post: any }) {
 	return (
 		<div className="bg-white shadow-md rounded-xl overflow-hidden hover:shadow-lg transition">
 			<Link href={`/blog/${post.slug}`}>
-				<img
+				<Image
 					src={post.image}
 					alt={post.title}
+					width={300}
+					height={200}
 					className="h-48 w-full object-cover"
 				/>
 			</Link>

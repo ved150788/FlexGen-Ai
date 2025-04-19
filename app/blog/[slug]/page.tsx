@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import BreadcrumbLayout from "../../components/BreadcrumbLayout";
 import SharedLayout from "../../components/SharedLayout";
 import { Metadata } from "next";
+import Image from "next/image";
 
 interface Props {
 	params: { slug: string };
@@ -123,10 +124,12 @@ export default function BlogDetailPage({ params }: Props) {
 
 				<article className="bg-white">
 					<div className="relative h-[50vh] min-h-[400px] bg-black">
-						<img
+						<Image
 							src={post.image}
 							alt={post.title}
 							className="absolute w-full h-full object-cover opacity-70"
+							width={1200}
+							height={630}
 						/>
 						<div className="absolute inset-0 bg-gradient-to-b from-transparent to-black opacity-70"></div>
 						<div className="absolute bottom-0 left-0 right-0 p-8 text-white">
@@ -210,10 +213,12 @@ export default function BlogDetailPage({ params }: Props) {
 											className="group block"
 										>
 											<div className="rounded-lg overflow-hidden mb-3">
-												<img
+												<Image
 													src={relatedPost.image}
 													alt={relatedPost.title}
 													className="h-48 w-full object-cover group-hover:scale-105 transition duration-300"
+													width={300}
+													height={200}
 												/>
 											</div>
 											<h4 className="font-semibold group-hover:text-primarySaffron transition">

@@ -2,6 +2,7 @@
 
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
+import Image from "next/image";
 
 import "swiper/css";
 import "swiper/css/navigation";
@@ -74,9 +75,11 @@ export default function TeamCarousel() {
 				{teamMembers.map((member, index) => (
 					<SwiperSlide key={index}>
 						<div className="bg-white rounded-xl shadow p-6 text-center h-full flex flex-col items-center justify-center">
-							<img
+							<Image
 								src={member.image}
 								alt={member.name}
+								width={96}
+								height={96}
 								className="w-24 h-24 rounded-full mb-4 object-cover"
 							/>
 							<h3 className="text-lg font-semibold">{member.name}</h3>

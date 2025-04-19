@@ -9,14 +9,15 @@
 :root {
 	--background: #ffffff;
 	--foreground: #171717;
-	--font-poppins: "Poppins", sans-serif;
+	--font-lato: "Lato", sans-serif;
+	--swiper-theme-color: #f4a261;
+	--swiper-navigation-size: 24px;
 }
 
 @theme inline {
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
-	--font-sans: var(--font-geist-sans);
-	--font-mono: var(--font-geist-mono);
+	--font-sans: var(--font-lato);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,7 +30,62 @@
 body {
 	background: var(--background);
 	color: var(--foreground);
-	font-family: var(--font-poppins), sans-serif;
+	font-family: var(--font-lato), sans-serif;
+	font-weight: 400;
+	line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-weight: 700;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	margin-bottom: 0.5em;
+}
+
+h1 {
+	font-weight: 900;
+	font-size: 2.5rem;
+}
+
+h2 {
+	font-weight: 900;
+	font-size: 2rem;
+}
+
+h3 {
+	font-weight: 700;
+	font-size: 1.5rem;
+}
+
+p {
+	font-weight: 400;
+	margin-bottom: 1em;
+}
+
+strong,
+b {
+	font-weight: 700;
+}
+
+.font-light {
+	font-weight: 300;
+}
+
+.font-thin {
+	font-weight: 100;
+}
+
+.font-bold {
+	font-weight: 700;
+}
+
+.font-black {
+	font-weight: 900;
 }
 
 @keyframes scroll {
@@ -62,4 +118,39 @@ body {
 
 .animate-fadeIn {
 	animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Service Carousel Styles */
+.services-swiper .swiper-button-next,
+.services-swiper .swiper-button-prev {
+	color: #000;
+	background-color: rgba(255, 255, 255, 0.7);
+	padding: 30px;
+	border-radius: 50%;
+	width: 24px;
+	height: 24px;
+	z-index: 10;
+}
+.services-swiper .swiper-button-next:after,
+.services-swiper .swiper-button-prev:after {
+	font-size: 16px;
+	font-weight: bold;
+}
+.services-swiper .swiper-pagination-bullet-active {
+	background: #f4a261;
+}
+.services-swiper .swiper-pagination {
+	bottom: 0px;
+}
+.swiper-wrapper {
+	padding-bottom: 10px;
+	align-items: stretch;
+	min-height: 300px;
+}
+.swiper-slide {
+	height: auto;
+	display: flex;
+}
+.swiper-slide > div {
+	width: 100%;
 }
