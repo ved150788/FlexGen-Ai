@@ -39,7 +39,7 @@ const ContactForm: React.FC = () => {
 
 		// Send email logic
 		try {
-			const res = await fetch("http://localhost:5000/contact", {
+			const res = await fetch("/api/contact", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ name, email, message }),
@@ -52,23 +52,31 @@ const ContactForm: React.FC = () => {
 				setTimeout(() => setShowSuccess(false), 3000);
 			} else {
 				const err = await res.json();
-				alert("Failed to send message: " + err.error);
+				setErrors({
+					name: err.errors?.name || "",
+					email: err.errors?.email || "",
+					message: err.errors?.message || "",
+				});
 			}
 		} catch (error) {
-			alert("Server Error: " + error);
+			console.error("Error submitting form:", error);
+			setErrors({
+				...errors,
+				message: "An error occurred. Please try again later.",
+			});
 		}
 	};
 
 	return (
-		<section id="contact" className="py-12 px-6 text-white bg-black border">
-			<div className="max-w-3xl mx-auto border-2 border-white rounded-xl p-6">
+		<section id="contact" className="py-12 px-6 text-black steel-gradient">
+			<div className="max-w-3xl mx-auto bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-8 shadow-lg">
 				<h2 className="text-3xl font-bold text-center mb-4">Contact Us</h2>
 
 				<p className="text-center text-lg mb-6">
 					📧 Email us at:{" "}
 					<a
 						href="mailto:hello@flexgen.ai"
-						className="font-semibold underline hover:text-primarySaffron"
+						className="font-semibold underline hover:text-primarySaffron transition-colors duration-200"
 					>
 						hello@flexgen.ai
 					</a>
@@ -76,7 +84,7 @@ const ContactForm: React.FC = () => {
 
 				<form
 					onSubmit={handleSubmit}
-					className="rounded-lg p-6 space-y-4 bg-transparent"
+					className="rounded-lg p-6 space-y-4 bg-white bg-opacity-5 border border-white border-opacity-20"
 				>
 					<div>
 						<label htmlFor="name" className="block text-sm font-medium">
@@ -87,7 +95,7 @@ const ContactForm: React.FC = () => {
 							id="name"
 							name="name"
 							placeholder="John Doe"
-							className="bg-white text-black mt-1 w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
+							className="bg-white text-black mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-steelBlue transition-all duration-200"
 						/>
 						{errors.name && (
 							<p className="text-red-400 text-sm mt-1">{errors.name}</p>
@@ -103,7 +111,7 @@ const ContactForm: React.FC = () => {
 							id="email"
 							name="email"
 							placeholder="john@example.com"
-							className="bg-white text-black mt-1 w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
+							className="bg-white text-black mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-steelBlue transition-all duration-200"
 						/>
 						{errors.email && (
 							<p className="text-red-400 text-sm mt-1">{errors.email}</p>
@@ -119,7 +127,7 @@ const ContactForm: React.FC = () => {
 							name="message"
 							rows={4}
 							placeholder="Type your message"
-							className="bg-white text-black mt-1 w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#F4A261]"
+							className="bg-white text-black mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-steelBlue transition-all duration-200"
 						></textarea>
 						{errors.message && (
 							<p className="text-red-400 text-sm mt-1">{errors.message}</p>
@@ -128,7 +136,7 @@ const ContactForm: React.FC = () => {
 
 					<button
 						type="submit"
-						className="bg-white text-black font-semibold px-6 py-2 rounded hover:bg-[#F4A261] hover:text-white transition"
+						className="w-full steel-gradient hover:saffron-gradient text-white font-medium px-6 py-3 rounded-lg transition-all duration-300 shadow-md"
 					>
 						Send Message
 					</button>
@@ -138,11 +146,17 @@ const ContactForm: React.FC = () => {
 			{/* Thank You Message */}
 			{showSuccess && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-					<div className="bg-white p-6 rounded-lg shadow-lg text-center w-[90%] max-w-sm animate-fadeIn">
-						<h3 className="text-lg font-semibold mb-2 text-black">
+					<div className="steel-gradient p-6 rounded-lg shadow-lg text-center w-[90%] max-w-sm animate-fadeIn">
+						<button
+							onClick={() => setShowSuccess(false)}
+							className="absolute top-2 right-2 bg-white bg-opacity-20 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-opacity-30 transition-colors"
+						>
+							×
+						</button>
+						<h3 className="text-lg font-semibold mb-2 text-white">
 							Thank you for contacting us!
 						</h3>
-						<p className="text-sm text-gray-700">
+						<p className="text-sm text-white text-opacity-90">
 							We will get back to you as soon as possible.
 						</p>
 					</div>

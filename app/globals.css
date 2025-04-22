@@ -10,8 +10,45 @@
 	--background: #ffffff;
 	--foreground: #171717;
 	--font-lato: "Lato", sans-serif;
-	--swiper-theme-color: #f4a261;
+	--swiper-theme-color: #4682b4;
 	--swiper-navigation-size: 24px;
+
+	/* Color scheme variables */
+	--primary-blue: #1e40af;
+	--primary-dark-blue: #172554;
+	--primary-light-blue: #3b82f6;
+	--steel-blue: #4682b4;
+	--steel-dark: #2c5282;
+	--steel-light: #63b3ed;
+	--secondary-black: #0f172a;
+	--primary-saffron: #f4a261;
+	--saffron-dark: #dd6b20;
+
+	/* Gradient variables */
+	--steel-gradient: linear-gradient(
+		to right,
+		var(--steel-dark),
+		var(--steel-blue),
+		var(--steel-light)
+	);
+	--saffron-gradient: linear-gradient(
+		to right,
+		var(--primary-saffron),
+		var(--saffron-dark),
+		var(--secondary-black)
+	);
+
+	/* Additional gradient styles */
+	--steel-gradient-angle: linear-gradient(
+		135deg,
+		var(--steel-dark) 0%,
+		var(--steel-blue) 100%
+	);
+	--saffron-gradient-angle: linear-gradient(
+		135deg,
+		var(--primary-saffron) 0%,
+		#e76f51 100%
+	);
 }
 
 @theme inline {
@@ -33,6 +70,66 @@ body {
 	font-family: var(--font-lato), sans-serif;
 	font-weight: 400;
 	line-height: 1.6;
+}
+
+/* Custom gradient classes */
+.steel-gradient {
+	background: var(--steel-gradient);
+	transition: background 0.3s ease;
+}
+
+.saffron-gradient {
+	background: var(--saffron-gradient);
+}
+
+.steel-gradient-angle {
+	background: var(--steel-gradient-angle);
+}
+
+.saffron-gradient-angle {
+	background: var(--saffron-gradient-angle);
+}
+
+.primarySaffron {
+	color: var(--primary-saffron);
+}
+
+/* Base button styles */
+.btn-primary {
+	background: var(--steel-gradient);
+	color: white;
+	transition: all 0.5s ease;
+	background-size: 200% auto;
+}
+
+.btn-primary:hover {
+	background: var(--saffron-gradient);
+	background-size: 200% auto;
+	color: white;
+}
+
+.btn-secondary {
+	background-color: var(--secondary-black);
+	color: white;
+	transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+	background: var(--steel-gradient);
+	color: white;
+}
+
+.btn-outline {
+	border: 2px solid var(--steel-blue);
+	color: var(--steel-blue);
+	background-color: transparent;
+	transition: all 0.3s ease;
+}
+
+.btn-outline:hover {
+	background: var(--saffron-gradient);
+	border-color: transparent;
+	color: white;
 }
 
 h1,
@@ -137,7 +234,7 @@ b {
 	font-weight: bold;
 }
 .services-swiper .swiper-pagination-bullet-active {
-	background: #f4a261;
+	background: var(--steel-blue);
 }
 .services-swiper .swiper-pagination {
 	bottom: 0px;

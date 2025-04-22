@@ -6,6 +6,12 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import Image from "next/image";
 
+// Import Swiper styles
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+import "swiper/css/scrollbar";
+
 export default function ServicesSection() {
 	const [mounted, setMounted] = useState(false);
 
@@ -26,7 +32,7 @@ export default function ServicesSection() {
 				</div>
 
 				{mounted ? (
-					<div className="overflow-hidden pb-16">
+					<div className="overflow-hidden pb-16 services-swiper">
 						<Swiper
 							modules={[Navigation, Pagination, Autoplay]}
 							spaceBetween={20}

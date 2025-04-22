@@ -6,12 +6,12 @@ export default function CtaSection() {
 	const [isOpen, setIsOpen] = useState(false);
 
 	return (
-		<section className="bg-white text-white py-12 px-6 ">
+		<section className="bg-white text-black py-12 px-6">
 			<div className="max-w-4xl mx-auto text-center">
-				<h2 className="text-3xl font-bold mb-4 text-black">
+				<h2 className="text-3xl font-bold mb-4">
 					Ready to take your cybersecurity to the next level?
 				</h2>
-				<p className="mb-6 text-lg text-black">
+				<p className="mb-6 text-lg">
 					Let Flexgen.ai protect your digital future with expert-led strategies,
 					real-time monitoring, and AI-driven defenses.
 				</p>

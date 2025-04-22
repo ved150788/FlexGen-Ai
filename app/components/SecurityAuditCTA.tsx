@@ -31,13 +31,13 @@ export default function SecurityAuditCTA({
 	const closeModal = () => setIsModalOpen(false);
 
 	const baseStyle =
-		"inline-flex items-center justify-center rounded-lg font-medium transition-colors duration-200 px-6 py-3";
+		"inline-flex items-center justify-center rounded-lg font-medium transition-all duration-300 px-6 py-3";
 
 	const variantStyles = {
-		primary: "bg-primarySaffron text-black hover:bg-black hover:text-white",
-		secondary: "bg-primaryBlue text-white hover:bg-blue-600",
+		primary: "steel-gradient text-white hover:saffron-gradient",
+		secondary: "bg-secondaryBlack text-white hover:steel-gradient",
 		outline:
-			"border-2 border-primarySaffron text-primarySaffron hover:bg-primarySaffron hover:text-black",
+			"border-2 border-steelBlue text-steelBlue hover:saffron-gradient hover:border-transparent",
 	};
 
 	const buttonStyle = `${baseStyle} ${variantStyles[variant]} ${

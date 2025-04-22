@@ -2,6 +2,7 @@
 
 body {
 	background-color: black;
+	color: white;
 }
 
 .numbered-title {
@@ -9,7 +10,7 @@ body {
 	padding-left: 3rem; /* Creates space for the number */
 	font-weight: 700;
 	font-size: 1.125rem; /* ~18px (tailwind text-lg) */
-	color: white; /* Tailwind gray-900 */
+	color: black;
 }
 
 .numbered-title::before {
@@ -17,6 +18,6 @@ body {
 	position: absolute;
 	left: 0;
 	top: 0;
-	color: white; /* You can change this to match brand color */
+	color: black;
 	font-weight: 600;
 }

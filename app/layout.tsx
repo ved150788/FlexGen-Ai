@@ -1,44 +1,41 @@
-// app/layout.tsx
-import type { Metadata } from "next";
-import { Lato } from "next/font/google";
+// For custom app metadata
+import { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { ModalProvider } from "./context/ModalProvider";
-import { defaultMetadata } from "./seo-config";
+import MainLayout from "./components/MainLayout";
 
-// Import Swiper styles globally
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
+// Load the Inter font
+const inter = Inter({ subsets: ["latin"] });
 
-const lato = Lato({
-	subsets: ["latin"],
-	weight: ["100", "300", "400", "700", "900"],
-	variable: "--font-lato",
-	display: "swap",
-});
+// Generate metadata for the app
+export const metadata: Metadata = {
+	title: "FlexGen.ai | Enterprise-Grade AI Cybersecurity",
+	description:
+		"Our proprietary AI technologies provide predictive and proactive security solutions to protect your digital assets from emerging threats.",
+	keywords: [
+		"cybersecurity",
+		"AI security",
+		"enterprise security",
+		"threat detection",
+	],
+	authors: [{ name: "FlexGen.ai Team" }],
+	viewport: "width=device-width, initial-scale=1",
+	robots: "index, follow",
+};
 
-export const metadata: Metadata = defaultMetadata;
-
+// Root layout component
 export default function RootLayout({
 	children,
-}: Readonly<{
+}: {
 	children: React.ReactNode;
-}>) {
+}) {
 	return (
-		<html lang="en">
+		<html lang="en" className="scroll-smooth">
 			<head>
 				<link rel="icon" href="/favicon.ico" sizes="any" />
-				<link rel="apple-touch-icon" href="/apple-icon.png" />
-				<meta name="theme-color" content="#111111" />
 			</head>
-			<body
-				className={`${lato.variable} font-sans antialiased`}
-				suppressHydrationWarning={true}
-			>
-				<ModalProvider>
-					{children}
-					{/* Modal is handled by the ModalProvider */}
-				</ModalProvider>
+			<body className={inter.className}>
+				<MainLayout>{children}</MainLayout>
 			</body>
 		</html>
 	);

@@ -66,10 +66,11 @@ const tools = [
 		id: "ai-recon-bot",
 		name: "AI Recon Bot",
 		description:
-			"Intelligent reconnaissance tool that identifies potential security issues",
-		category: "Intelligence",
-		status: "coming-soon",
+			"Cybersecurity tool that scans domains for surface-level risks with auto-tagged risk levels",
+		category: "Scanning & Assessment",
+		status: "available",
 		icon: "🤖",
+		beta: true,
 	},
 	{
 		id: "smart-waf-tester",
@@ -194,6 +195,10 @@ export default function ToolsDashboard() {
 										{tool.status === "coming-soon" ? (
 											<span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
 												Coming Soon
+											</span>
+										) : tool.beta ? (
+											<span className="text-xs font-medium bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+												Beta
 											</span>
 										) : (
 											<span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-1 rounded-full">

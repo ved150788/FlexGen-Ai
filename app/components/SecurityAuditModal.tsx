@@ -108,19 +108,31 @@ export default function SecurityAuditModal({ isOpen, onClose }: Props) {
 			{/* Security Audit Modal */}
 			<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 overflow-y-auto py-10">
 				<div className="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-lg mx-4">
+					{/* Close button in the top-right corner */}
 					<button
-						className="absolute top-3 right-3 text-black text-xl font-bold hover:text-red-500 transition"
+						className="absolute top-3 right-3 bg-gray-200 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-300 transition-colors duration-200"
 						onClick={onClose}
 						aria-label="Close modal"
 					>
-						&times;
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-5 w-5"
+							viewBox="0 0 20 20"
+							fill="currentColor"
+						>
+							<path
+								fillRule="evenodd"
+								d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+								clipRule="evenodd"
+							/>
+						</svg>
 					</button>
 
 					<div className="mb-6 text-center">
-						<div className="inline-block p-3 rounded-full bg-primarySaffron/10 mb-4">
+						<div className="inline-block p-3 rounded-full bg-steelBlue/10 mb-4">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								className="h-8 w-8 text-primarySaffron"
+								className="h-8 w-8 text-steelBlue"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
@@ -161,7 +173,7 @@ export default function SecurityAuditModal({ isOpen, onClose }: Props) {
 									placeholder="John Doe"
 									className={`w-full border ${
 										errors.name ? "border-red-500" : "border-gray-300"
-									} p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-primarySaffron`}
+									} p-3 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-steelBlue`}
 								/>
 								{errors.name && (
 									<p className="text-red-500 text-xs mt-1">{errors.name}</p>
@@ -185,7 +197,7 @@ export default function SecurityAuditModal({ isOpen, onClose }: Props) {
 									placeholder="john@company.com"
 									className={`w-full border ${
 										errors.email ? "border-red-500" : "border-gray-300"
-									} p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-primarySaffron`}
+									} p-3 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-steelBlue`}
 								/>
 								{errors.email && (
 									<p className="text-red-500 text-xs mt-1">{errors.email}</p>
@@ -211,7 +223,7 @@ export default function SecurityAuditModal({ isOpen, onClose }: Props) {
 									placeholder="Your Company"
 									className={`w-full border ${
 										errors.company ? "border-red-500" : "border-gray-300"
-									} p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-primarySaffron`}
+									} p-3 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-steelBlue`}
 								/>
 								{errors.company && (
 									<p className="text-red-500 text-xs mt-1">{errors.company}</p>
@@ -230,7 +242,7 @@ export default function SecurityAuditModal({ isOpen, onClose }: Props) {
 									name="employeeCount"
 									value={formData.employeeCount}
 									onChange={handleChange}
-									className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-primarySaffron"
+									className="w-full border border-gray-300 p-3 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-steelBlue"
 								>
 									<option value="">Select...</option>
 									<option value="1-10">1-10</option>
@@ -254,7 +266,7 @@ export default function SecurityAuditModal({ isOpen, onClose }: Props) {
 								name="industry"
 								value={formData.industry}
 								onChange={handleChange}
-								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-primarySaffron"
+								className="w-full border border-gray-300 p-3 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-steelBlue"
 							>
 								<option value="">Select...</option>
 								<option value="Finance">Finance & Banking</option>
@@ -281,17 +293,17 @@ export default function SecurityAuditModal({ isOpen, onClose }: Props) {
 								rows={3}
 								value={formData.currentSecurity}
 								onChange={handleChange}
-								placeholder="Briefly describe your current cybersecurity measures"
-								className="w-full border border-gray-300 p-3 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primarySaffron"
+								placeholder="Tell us briefly about your current security measures..."
+								className="w-full border border-gray-300 p-3 text-black rounded-md focus:outline-none focus:ring-2 focus:ring-steelBlue"
 							></textarea>
 						</div>
 
 						<div className="pt-2">
 							<button
 								type="submit"
-								className="w-full bg-primarySaffron text-black py-3 rounded-md font-semibold hover:bg-black hover:text-white transition duration-300"
+								className="w-full py-3 px-4 steel-gradient hover:saffron-gradient text-white font-medium rounded-md transition-all duration-300 shadow"
 							>
-								Request Free Security Audit
+								Submit Request
 							</button>
 							<p className="text-xs text-gray-500 mt-2 text-center">
 								Your information is secured with SSL encryption and will never

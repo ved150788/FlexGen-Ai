@@ -1,9 +1,18 @@
-import { createMetadata } from "./seo-config";
+import { Metadata } from "next";
 
-export const metadata = createMetadata({
-	title: "FlexGen.ai | AI-Powered Cybersecurity Solutions",
-	description:
-		"Protect your organization with advanced AI-driven cybersecurity solutions. Our expert team helps identify, prevent, and mitigate cyber threats in real-time.",
-	path: "",
-	image: "/images/home-og.jpg",
-});
+export function generateMetadata(): Metadata {
+	return {
+		title: "FlexGen.ai | Enterprise-Grade AI Cybersecurity",
+		description:
+			"Our proprietary AI technologies provide predictive and proactive security solutions to protect your digital assets from emerging threats.",
+		keywords: [
+			"cybersecurity",
+			"AI security",
+			"enterprise security",
+			"threat detection",
+		],
+		authors: [{ name: "FlexGen.ai Team" }],
+		viewport: "width=device-width, initial-scale=1",
+		robots: "index, follow",
+	};
+}
