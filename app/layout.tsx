@@ -3,6 +3,7 @@ import { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import MainLayout from "./components/MainLayout";
+import { Analytics } from "@vercel/analytics/react";
 
 // Load the Inter font
 const inter = Inter({ subsets: ["latin"] });
