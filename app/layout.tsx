@@ -1,5 +1,5 @@
 // For custom app metadata
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import MainLayout from "./components/MainLayout";
@@ -19,8 +19,13 @@ export const metadata: Metadata = {
 		"threat detection",
 	],
 	authors: [{ name: "FlexGen.ai Team" }],
-	viewport: "width=device-width, initial-scale=1",
 	robots: "index, follow",
+};
+
+// Define viewport export separately
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
 };
 
 // Root layout component
@@ -34,7 +39,7 @@ export default function RootLayout({
 			<head>
 				<link rel="icon" href="/favicon.ico" sizes="any" />
 			</head>
-			<body className={inter.className}>
+			<body className={inter.className} suppressHydrationWarning>
 				<MainLayout>{children}</MainLayout>
 			</body>
 		</html>

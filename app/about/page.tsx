@@ -9,9 +9,8 @@ import "aos/dist/aos.css";
 import Script from "next/script";
 
 // Components
-import TeamCarousel from "../components/TeamCarousel";
-import CompanyOverview from "../components/CompanyOverview";
-import SharedLayout from "../components/SharedLayout";
+import TeamCarousel from "../components/common/TeamCarousel";
+import CompanyOverview from "../components/common/CompanyOverview";
 
 // Team members data - would ideally come from a content management system
 const teamMembers = [
@@ -70,25 +69,24 @@ export default function AboutPage() {
 			<Script id="about-schema" type="application/ld+json">
 				{JSON.stringify(organizationSchema)}
 			</Script>
-			<SharedLayout>
-				<section className="text-center py-20 bg-gradient-to-r from-black via-gray-900 to-gray-800 text-white">
-					<h1 className="text-5xl font-bold mb-4">About Us</h1>
-					<p className="text-lg max-w-2xl mx-auto">
-						We're a team of cybersecurity experts on a mission to predict,
-						prevent, and protect.
-					</p>
-				</section>
 
-				{/* 👥 Meet Our Team */}
-				<div data-aos="fade-up">
-					<TeamCarousel />
-				</div>
+			<section className="text-center py-20 bg-gradient-to-r from-black via-gray-900 to-gray-800 text-white">
+				<h1 className="text-5xl font-bold mb-4">About Us</h1>
+				<p className="text-lg max-w-2xl mx-auto">
+					We're a team of cybersecurity experts on a mission to predict,
+					prevent, and protect.
+				</p>
+			</section>
 
-				{/* 📄 Vision / Mission / Company Info */}
-				<div data-aos="fade-up" data-aos-delay="200">
-					<CompanyOverview />
-				</div>
-			</SharedLayout>
+			{/* 👥 Meet Our Team */}
+			<div data-aos="fade-up">
+				<TeamCarousel />
+			</div>
+
+			{/* 📄 Vision / Mission / Company Info */}
+			<div data-aos="fade-up" data-aos-delay="200">
+				<CompanyOverview />
+			</div>
 		</>
 	);
 }

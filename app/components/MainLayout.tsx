@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import TopBar from "./TopBar";
-import NewsTicker from "./NewsTicker";
-import Navbar from "./Navbar";
-import Footer from "./Footer";
+import TopBar from "./layout/TopBar";
+import Navbar from "./layout/Navbar";
+import NewsTicker from "./layout/NewsTicker";
+import Footer from "./layout/Footer";
 
 export default function MainLayout({
 	children,
@@ -14,8 +14,9 @@ export default function MainLayout({
 	return (
 		<>
 			<TopBar />
-			<NewsTicker />
+
 			<Navbar />
+			<NewsTicker />
 			<main>{children}</main>
 			<Footer />
 		</>

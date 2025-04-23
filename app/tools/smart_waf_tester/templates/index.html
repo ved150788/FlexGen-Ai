@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart WAF Bypass Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center px-4">
+
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-2xl w-full">
+        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">🛡️ Smart WAF & Firewall Bypass Tester</h2>
+
+        <form id="scanForm" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Target URL *</label>
+                <input type="text" id="target" required placeholder="example.com or www.site.com"
+                    class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">HTTP Method *</label>
+                <select id="method" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Optional Headers (JSON format)</label>
+                <textarea id="headers" placeholder='{"User-Agent": "TesterBot"}'
+                    class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg resize-none"></textarea>
+            </div>
+
+            <div class="flex items-start">
+                <input type="checkbox" id="legalCheckbox" class="mt-1 mr-2" />
+                <label for="legalCheckbox" class="text-sm text-gray-600">
+                    I confirm this test is for ethical use and I have permission to test this target.
+                </label>
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50" disabled>🚀
+                Run Scan</button>
+        </form>
+
+        <!-- Loader -->
+        <div id="loader" class="mt-6 hidden flex justify-center">
+            <div class="w-8 h-8 border-4 border-blue-300 border-t-blue-600 border-solid rounded-full animate-spin">
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultContainer" class="mt-8 hidden">
+            <!-- Summary -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800">🔍 Scan Summary</h3>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-700 border border-gray-200">
+                        <thead class="bg-gray-100 text-gray-800 font-semibold">
+                            <tr>
+                                <th class="px-4 py-2 border-b">Payload</th>
+                                <th class="px-4 py-2 border-b">Status Code</th>
+                                <th class="px-4 py-2 border-b">WAF Response</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryTableBody" class="bg-white"></tbody>
+                    </table>
+                </div>
+
+                <!-- Percentage Box -->
+                <div class="mt-6 bg-blue-100 border border-blue-300 text-blue-800 px-4 py-2 rounded">
+                    ✅ <span id="percentBox" class="font-bold">0%</span> of payloads bypassed the WAF
+                </div>
+
+                <!-- Text Summary -->
+                <div class="mt-4 text-sm text-gray-700" id="summaryText"></div>
+            </div>
+
+            <!-- Raw JSON Output -->
+            <div
+                class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs overflow-x-auto shadow-inner max-h-96">
+                <pre id="jsonOutput"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JS -->
+    <script src="/static/main.js"></script>
+</body>
+
+</html>

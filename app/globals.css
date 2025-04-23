@@ -251,3 +251,21 @@ b {
 .swiper-slide > div {
 	width: 100%;
 }
+
+/* Blog breadcrumbs styling */
+.blog-post-page nav[aria-label="Breadcrumb"] {
+	color: #d1d5db;
+	margin-bottom: 1.5rem;
+}
+
+.blog-post-page nav[aria-label="Breadcrumb"] a {
+	color: #d1d5db;
+}
+
+.blog-post-page nav[aria-label="Breadcrumb"] a:hover {
+	color: white;
+}
+
+.blog-post-page nav[aria-label="Breadcrumb"] span {
+	color: #93c5fd;
+}

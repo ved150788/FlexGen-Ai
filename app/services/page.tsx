@@ -1,12 +1,11 @@
 "use client";
 
-import ServicesGrid from "../components/ServicesGrid";
+import ServicesGrid from "../components/services/ServicesGrid";
 import Link from "next/link";
-import SharedLayout from "../components/SharedLayout";
 
 export default function ServicesPage() {
 	return (
-		<SharedLayout>
+		<>
 			{/* HERO SECTION */}
 			<section className="relative h-screen flex items-center justify-center text-white text-center overflow-hidden">
 				<img
@@ -48,6 +47,6 @@ export default function ServicesPage() {
 					</Link>
 				</div>
 			</section>
-		</SharedLayout>
+		</>
 	);
 }
