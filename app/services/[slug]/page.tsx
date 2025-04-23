@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 interface Props {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
