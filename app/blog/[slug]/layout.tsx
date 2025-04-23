@@ -1,18 +1,13 @@
 import { blogs } from "../../data/blogs";
 import { Metadata } from "next";
 
-type LayoutProps = {
-	children: React.ReactNode;
-	params: { slug: string };
-};
-
 // Generate metadata for each blog post page
 export async function generateMetadata({
 	params,
 }: {
-	params: { slug: string };
+	params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-	// Now we properly await the params
+	// Await the params promise
 	const { slug } = await params;
 
 	// Find the post with the matching slug
@@ -63,6 +58,10 @@ export function generateStaticParams() {
 	return blogs.map((post) => ({ slug: post.slug }));
 }
 
-export default function BlogPostLayout({ children }: LayoutProps) {
+export default function BlogPostLayout({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
 	return children;
 }
