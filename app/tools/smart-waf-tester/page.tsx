@@ -1,6 +1,32 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import {
+	Chart as ChartJS,
+	ArcElement,
+	Tooltip,
+	Legend,
+	CategoryScale,
+	LinearScale,
+	BarElement,
+	Title,
+	PointElement,
+	LineElement,
+} from "chart.js";
+import { Doughnut, Bar } from "react-chartjs-2";
+
+// Register ChartJS components
+ChartJS.register(
+	ArcElement,
+	Tooltip,
+	Legend,
+	CategoryScale,
+	LinearScale,
+	BarElement,
+	Title,
+	PointElement,
+	LineElement
+);
 
 // Define types for the scan results
 interface TestResult {
@@ -8,6 +34,7 @@ interface TestResult {
 	description: string;
 	status: "Success" | "Failed" | "Blocked";
 	details: string;
+	category: string;
 }
 
 interface ScanResults {
@@ -19,8 +46,116 @@ interface ScanResults {
 		successful_bypasses: number;
 		blocked_attempts: number;
 		failed_tests: number;
+		bypass_by_category?: Record<string, number>;
+		categories?: string[];
 	};
 }
+
+// Chart components for visualizing the results
+const ResultsBreakdownChart = ({ summary }: { summary: any }) => {
+	if (!summary) return null;
+
+	const data = {
+		labels: ["Successful Bypasses", "Blocked Attempts", "Failed Tests"],
+		datasets: [
+			{
+				label: "Test Results",
+				data: [
+					summary.successful_bypasses || 0,
+					summary.blocked_attempts || 0,
+					summary.failed_tests || 0,
+				],
+				backgroundColor: [
+					"rgba(220, 38, 38, 0.7)", // red-600 with opacity
+					"rgba(16, 185, 129, 0.7)", // emerald-500 with opacity
+					"rgba(245, 158, 11, 0.7)", // amber-500 with opacity
+				],
+				borderColor: [
+					"rgb(220, 38, 38)",
+					"rgb(16, 185, 129)",
+					"rgb(245, 158, 11)",
+				],
+				borderWidth: 1,
+			},
+		],
+	};
+
+	const options = {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			legend: {
+				position: "right" as const,
+			},
+			title: {
+				display: true,
+				text: "Test Results Distribution",
+				color: "#1e3a8a", // blue-900
+				font: {
+					size: 16,
+				},
+			},
+		},
+	};
+
+	return (
+		<div className="h-64 md:h-80">
+			<Doughnut data={data} options={options} />
+		</div>
+	);
+};
+
+const CategoryBypassChart = ({ summary }: { summary: any }) => {
+	if (!summary || !summary.categories || !summary.bypass_by_category)
+		return null;
+
+	const data = {
+		labels: summary.categories,
+		datasets: [
+			{
+				label: "Successful Bypasses by Category",
+				data: summary.categories.map(
+					(cat: string) => summary.bypass_by_category[cat] || 0
+				),
+				backgroundColor: "rgba(37, 99, 235, 0.6)", // blue-600
+				borderColor: "rgb(37, 99, 235)",
+				borderWidth: 1,
+			},
+		],
+	};
+
+	const options = {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			title: {
+				display: true,
+				text: "Bypasses by Attack Category",
+				color: "#1e3a8a", // blue-900
+				font: {
+					size: 16,
+				},
+			},
+			legend: {
+				display: false,
+			},
+		},
+		scales: {
+			y: {
+				beginAtZero: true,
+				ticks: {
+					precision: 0,
+				},
+			},
+		},
+	};
+
+	return (
+		<div className="h-64">
+			<Bar data={data} options={options} />
+		</div>
+	);
+};
 
 export default function SmartWafTesterPage() {
 	const [targetUrl, setTargetUrl] = useState("");
@@ -48,13 +183,9 @@ export default function SmartWafTesterPage() {
 		}
 
 		// Basic URL validation
-		if (
-			!targetUrl.startsWith("http://") &&
-			!targetUrl.startsWith("https://") &&
-			!targetUrl.startsWith("www")
-		) {
-			setError("URL must start with http:// or https:// or www.");
-			return;
+		let processedUrl = targetUrl;
+		if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+			processedUrl = "https://" + targetUrl;
 		}
 
 		setIsSubmitting(true);
@@ -136,12 +267,21 @@ export default function SmartWafTesterPage() {
 			// Log the start of the test
 			setLogs((prev) => [
 				...prev,
-				`[${new Date().toLocaleTimeString()}] Starting WAF tests for ${targetUrl}...`,
+				`[${new Date().toLocaleTimeString()}] Starting WAF tests for ${processedUrl}...`,
 			]);
 
-			// Make API call to the backend (once we implement the API)
-			// For now, create mock data for the beta version
-			await new Promise((resolve) => setTimeout(resolve, 10000)); // Simulate API delay
+			// Make API call to the backend
+			const response = await fetch("/api/tools/smart-waf-tester", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					target_url: processedUrl,
+					mode: "standard", // Could add mode options in the future
+				}),
+				signal, // Pass the AbortController signal
+			});
 
 			// Clear interval and timeout when response is received
 			clearInterval(progressInterval);
@@ -164,64 +304,23 @@ export default function SmartWafTesterPage() {
 			setProgress(100);
 			setScanStage("Test completed");
 
-			// Mock results for beta version
-			const mockResults: ScanResults = {
-				target_url: targetUrl,
-				scan_time: new Date().toISOString(),
-				results: [
-					{
-						technique: "SQL Injection Bypass",
-						description: "Attempt to bypass WAF using SQL comment techniques",
-						status: Math.random() > 0.5 ? "Success" : "Blocked",
-						details:
-							"Tested bypasses using SQL comments and encoded characters",
-					},
-					{
-						technique: "XSS Bypass",
-						description: "Attempt to bypass WAF using JavaScript encoding",
-						status: Math.random() > 0.7 ? "Success" : "Blocked",
-						details: "Tested various JavaScript encoding techniques",
-					},
-					{
-						technique: "Path Traversal",
-						description: "Testing directory traversal protections",
-						status: Math.random() > 0.6 ? "Success" : "Blocked",
-						details: "Attempted to access sensitive files using path traversal",
-					},
-					{
-						technique: "HTTP Header Injection",
-						description: "Testing HTTP header injection and manipulation",
-						status: Math.random() > 0.5 ? "Blocked" : "Success",
-						details: "Tested various HTTP header manipulation techniques",
-					},
-					{
-						technique: "User-Agent Spoofing",
-						description: "Masking test traffic with different user-agents",
-						status: Math.random() > 0.3 ? "Success" : "Blocked",
-						details: "Used various user-agent strings to bypass detection",
-					},
-				],
-				summary: {
-					total_tests: 5,
-					successful_bypasses: 0, // Will be calculated below
-					blocked_attempts: 0, // Will be calculated below
-					failed_tests: 0,
-				},
-			};
+			const responseData = await response.json();
 
-			// Calculate summary stats
-			mockResults.summary.successful_bypasses = mockResults.results.filter(
-				(r) => r.status === "Success"
-			).length;
-			mockResults.summary.blocked_attempts = mockResults.results.filter(
-				(r) => r.status === "Blocked"
-			).length;
+			if (!response.ok) {
+				const errorMessage =
+					responseData.error || `Error: ${response.statusText}`;
+				setLogs((prev) => [
+					...prev,
+					`[${new Date().toLocaleTimeString()}] Error: ${errorMessage}`,
+				]);
+				throw new Error(errorMessage);
+			}
 
 			setLogs((prev) => [
 				...prev,
-				`[${new Date().toLocaleTimeString()}] Scan completed successfully.`,
+				`[${new Date().toLocaleTimeString()}] Test completed successfully.`,
 			]);
-			setResults(mockResults);
+			setResults(responseData);
 
 			// Auto-expand the summary section
 			setExpandedSections(["summary"]);
@@ -256,6 +355,7 @@ export default function SmartWafTesterPage() {
 			}
 		} finally {
 			setIsSubmitting(false);
+			abortControllerRef.current = null;
 		}
 	};
 
@@ -278,149 +378,269 @@ export default function SmartWafTesterPage() {
 		);
 	};
 
+	// Scroll console to bottom when logs update
+	useEffect(() => {
+		const consoleElement = document.getElementById("console-output");
+		if (consoleElement) {
+			consoleElement.scrollTop = consoleElement.scrollHeight;
+		}
+	}, [logs]);
+
+	// Cleanup timeouts on unmount
+	useEffect(() => {
+		return () => {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+		};
+	}, []);
+
 	return (
-		<div className="max-w-6xl mx-auto px-4 py-8">
+		<div className="max-w-7xl mx-auto px-4 py-12">
 			<div className="text-center mb-10">
-				<h1 className="text-4xl font-bold mb-2">Smart WAF Tester</h1>
-				<div className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-sm font-medium mb-4">
-					Beta
+				<div className="bg-gray-800 text-white py-12 px-6 rounded-lg shadow-lg mb-12">
+					<h1 className="text-4xl font-bold mb-3">Smart WAF Tester</h1>
+					<div className="flex justify-center items-center gap-2 mb-4">
+						<span className="text-sm font-medium bg-white bg-opacity-20 text-white px-3 py-1 rounded-full">
+							Beta
+						</span>
+					</div>
+					<p className="text-lg max-w-3xl mx-auto">
+						Test your web application firewall against common bypass techniques
+						and identify potential security weaknesses
+					</p>
 				</div>
-				<p className="text-gray-600 max-w-2xl mx-auto">
-					Test your web application firewall against common bypass techniques
-					and identify potential security weaknesses.
-				</p>
 			</div>
 
-			<div className="bg-white rounded-lg shadow-md p-6 mb-8">
+			<div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg p-8 mb-12 border border-gray-100">
 				<form onSubmit={handleSubmit}>
-					<div className="mb-4">
+					<div className="mb-6">
 						<label
 							htmlFor="targetUrl"
-							className="block text-gray-700 font-medium mb-2"
+							className="block text-steelDark font-semibold mb-2 text-gray-800"
 						>
 							Target Website URL
 						</label>
 						<input
 							type="text"
 							id="targetUrl"
+							placeholder="https://example.com"
 							value={targetUrl}
 							onChange={(e) => setTargetUrl(e.target.value)}
-							disabled={isSubmitting}
-							placeholder="https://example.com"
-							className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primarySaffron"
+							className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-steelBlue focus:border-transparent transition-all duration-200 text-gray-800"
 							required
+							disabled={isSubmitting}
 						/>
-						<p className="text-sm text-gray-500 mt-1">
-							Enter the URL of the website you want to test
+						<p className="text-xs text-gray-500 mt-2">
+							Enter the full URL including http:// or https:// prefix
 						</p>
 					</div>
 
-					<div className="mb-6">
-						<div className="flex items-center">
+					<div className="mb-6 p-5 bg-gray-50 rounded-lg border border-gray-200">
+						<label className="flex items-start cursor-pointer">
 							<input
 								type="checkbox"
-								id="legalConfirmation"
 								checked={legalConfirmation}
 								onChange={(e) => setLegalConfirmation(e.target.checked)}
+								className="mt-1 h-4 w-4 text-steelBlue border-gray-300 rounded focus:ring-steelBlue"
 								disabled={isSubmitting}
-								className="mr-2 h-4 w-4 text-primarySaffron"
-								required
 							/>
-							<label htmlFor="legalConfirmation" className="text-gray-700">
+							<span className="ml-3 text-sm text-gray-800">
 								I confirm I have legal authority to test this website and take
-								full responsibility for any consequences of the testing
-							</label>
-						</div>
+								full responsibility for any consequences of the testing. I
+								understand that unauthorized testing may violate laws and terms
+								of service.
+							</span>
+						</label>
 					</div>
 
-					{error && (
-						<div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-							{error}
-						</div>
-					)}
-
-					<div className="flex justify-end">
-						{isSubmitting ? (
-							<button
-								type="button"
-								onClick={handleCancelScan}
-								className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
-							>
-								Cancel Test
-							</button>
-						) : (
-							<button
-								type="submit"
-								className="px-4 py-2 bg-primarySaffron text-black rounded-md hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-primarySaffron"
-							>
-								Start Testing
-							</button>
-						)}
-					</div>
+					<button
+						type="submit"
+						disabled={isSubmitting || !targetUrl || !legalConfirmation}
+						className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-all duration-300 bg-gray-800 hover:bg-black ${
+							isSubmitting || !targetUrl || !legalConfirmation
+								? "bg-gray-300 cursor-not-allowed"
+								: "steel-gradient hover:saffron-gradient shadow-md hover:shadow-lg"
+						}`}
+					>
+						{isSubmitting ? "Testing..." : "Start WAF Test"}
+					</button>
 				</form>
+
+				{error && (
+					<div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+						<p className="text-red-700">{error}</p>
+					</div>
+				)}
 			</div>
 
+			{/* Progress Bar and Console Output */}
 			{isSubmitting && (
-				<div className="bg-white rounded-lg shadow-md p-6 mb-8">
-					<h2 className="text-xl font-semibold mb-4">Test Progress</h2>
+				<div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg p-8 mb-12">
 					<div className="mb-4">
-						<div className="w-full bg-gray-200 rounded-full h-4">
+						<div className="flex justify-between mb-3">
+							<span className="text-sm font-medium text-steelDark">
+								{scanStage || "Testing..."}
+							</span>
+							<span className="text-sm font-medium text-steelDark">
+								{progress}%
+							</span>
+						</div>
+						<div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
 							<div
-								className="bg-primarySaffron h-4 rounded-full"
+								className="steel-gradient h-4 rounded-full transition-all duration-300 ease-in-out"
 								style={{ width: `${progress}%` }}
 							></div>
 						</div>
-						<div className="flex justify-between mt-2 text-sm text-gray-600">
-							<span>{scanStage}</span>
-							<span>{progress}%</span>
-						</div>
 					</div>
-
-					{timeoutWarning && (
-						<div className="p-3 mb-4 bg-yellow-100 text-yellow-800 rounded-md">
-							The test is taking longer than expected. This may be due to
-							complex analysis or network conditions.
+					<div className="mt-6">
+						<div className="flex justify-between items-center mb-3">
+							<h3 className="text-md font-semibold text-steelDark">
+								Console Output
+							</h3>
+							<button
+								onClick={handleCancelScan}
+								className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors duration-200 px-3 py-1 rounded hover:bg-red-50"
+								disabled={isCancelling}
+							>
+								{isCancelling ? "Cancelling..." : "Stop Test"}
+							</button>
 						</div>
-					)}
+						<div
+							id="console-output"
+							className="bg-gray-900 text-green-400 font-mono text-xs p-5 rounded-lg h-64 overflow-y-auto shadow-inner"
+						>
+							{logs.length > 0 ? (
+								logs.map((log, index) => (
+									<div key={index} className="py-1">
+										{log}
+									</div>
+								))
+							) : (
+								<div>Waiting for test to start...</div>
+							)}
+						</div>
 
-					<div className="bg-gray-100 p-4 rounded-md h-48 overflow-y-auto font-mono text-sm">
-						{logs.map((log, index) => (
-							<div key={index} className="mb-1">
-								{log}
+						{timeoutWarning && (
+							<div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+								<p className="font-semibold mb-1">
+									This test is taking longer than expected.
+								</p>
+								<p>
+									Complex WAF tests can take several minutes to complete due to
+									the number of bypass techniques being tested and rate
+									limiting.
+								</p>
 							</div>
-						))}
+						)}
 					</div>
 				</div>
 			)}
 
+			{/* Results Display */}
 			{results && (
-				<div className="bg-white rounded-lg shadow-md p-6 mb-8">
-					<h2 className="text-xl font-semibold mb-4">
-						WAF Test Results for {results.target_url}
-					</h2>
-					<p className="text-sm text-gray-600 mb-4">
-						Scan completed on {new Date(results.scan_time).toLocaleString()}
-					</p>
+				<div className="bg-white rounded-lg shadow-lg border border-gray-100 p-6 mb-12">
+					<div className="flex items-center justify-between mb-8">
+						<h2 className="text-2xl font-bold text-gray-900">
+							WAF Test Results for {results.target_url}
+						</h2>
+						<div className="text-sm text-gray-500">
+							Tested on {new Date(results.scan_time).toLocaleString()}
+						</div>
+					</div>
+
+					{/* Dashboard - Charts Overview */}
+					<div className="mb-8 rounded-lg bg-gray-50 p-6 border border-gray-100">
+						<h3 className="text-xl font-semibold text-gray-800 mb-6">
+							Test Results Dashboard
+						</h3>
+
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* Results Distribution */}
+							<div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+								<ResultsBreakdownChart summary={results.summary} />
+							</div>
+
+							{/* Bypasses by Category */}
+							<div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+								<CategoryBypassChart summary={results.summary} />
+							</div>
+						</div>
+					</div>
 
 					{/* Summary Section */}
-					<div className="border border-gray-200 rounded-md mb-4 overflow-hidden">
-						<div
-							className="flex justify-between items-center p-4 cursor-pointer bg-gray-50 hover:bg-gray-100"
-							onClick={() => toggleSection("summary")}
-						>
-							<h3 className="font-medium">Summary</h3>
-							<span>{expandedSections.includes("summary") ? "▼" : "►"}</span>
+					<div
+						className={`mb-6 rounded-lg ${
+							expandedSections.includes("summary")
+								? "bg-blue-50 border-blue-100"
+								: "bg-gray-50 hover:bg-blue-50 border-gray-100 hover:border-blue-100"
+						} border p-4 transition-colors cursor-pointer`}
+						onClick={() => toggleSection("summary")}
+					>
+						<div className="flex items-center justify-between">
+							<h3 className="text-lg font-semibold text-gray-800 flex items-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									className="h-5 w-5 mr-2 text-blue-600"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+								>
+									<path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+									<path
+										fillRule="evenodd"
+										d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+										clipRule="evenodd"
+									/>
+								</svg>
+								Summary
+							</h3>
+							<div className="flex items-center">
+								{results.summary && (
+									<div className="flex items-center mr-4 space-x-2">
+										<span
+											className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700"
+											title="Successful Bypasses"
+										>
+											{results.summary.successful_bypasses || 0} Bypasses
+										</span>
+										<span
+											className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700"
+											title="Blocked Attempts"
+										>
+											{results.summary.blocked_attempts || 0} Blocked
+										</span>
+									</div>
+								)}
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									className={`h-5 w-5 transition-transform transform ${
+										expandedSections.includes("summary") ? "rotate-180" : ""
+									}`}
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M19 9l-7 7-7-7"
+									/>
+								</svg>
+							</div>
 						</div>
+
 						{expandedSections.includes("summary") && (
-							<div className="p-4 border-t border-gray-200">
+							<div className="mt-4">
+								{/* Summary stats */}
 								<div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-									<div className="bg-gray-50 p-4 rounded-md">
+									<div className="bg-white p-4 rounded-lg border border-gray-100">
 										<div className="text-sm text-gray-600">Total Tests</div>
 										<div className="text-2xl font-bold">
 											{results.summary.total_tests}
 										</div>
 									</div>
-									<div className="bg-red-50 p-4 rounded-md">
+									<div className="bg-red-50 p-4 rounded-lg border border-red-100">
 										<div className="text-sm text-red-600">
 											Successful Bypasses
 										</div>
@@ -428,117 +648,225 @@ export default function SmartWafTesterPage() {
 											{results.summary.successful_bypasses}
 										</div>
 									</div>
-									<div className="bg-green-50 p-4 rounded-md">
-										<div className="text-sm text-green-600">
+									<div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100">
+										<div className="text-sm text-emerald-600">
 											Blocked Attempts
 										</div>
-										<div className="text-2xl font-bold text-green-600">
+										<div className="text-2xl font-bold text-emerald-600">
 											{results.summary.blocked_attempts}
 										</div>
 									</div>
-									<div className="bg-yellow-50 p-4 rounded-md">
-										<div className="text-sm text-yellow-600">Failed Tests</div>
-										<div className="text-2xl font-bold text-yellow-600">
+									<div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+										<div className="text-sm text-amber-600">Failed Tests</div>
+										<div className="text-2xl font-bold text-amber-600">
 											{results.summary.failed_tests}
 										</div>
 									</div>
 								</div>
-								<div className="bg-gray-50 p-4 rounded-md mb-4">
-									<h4 className="font-medium mb-2">Security Assessment</h4>
-									<p className="text-gray-700">
+
+								{/* Security assessment */}
+								<div className="mb-4 bg-white p-4 rounded-lg border border-gray-100">
+									<h4 className="font-medium mb-2 text-gray-800">
+										Security Assessment
+									</h4>
+									<p className="text-gray-700 whitespace-pre-line">
 										{results.summary.successful_bypasses === 0
-											? "Your WAF appears to be effective against all tested bypass techniques. Continue monitoring for new attack vectors."
+											? "Your WAF appears to be effective against all tested bypass techniques. Continue monitoring for new attack vectors as attackers constantly develop new evasion methods."
 											: results.summary.successful_bypasses <= 1
-											? "Your WAF is mostly effective but has a minor vulnerability. Review the test details to address this issue."
-											: "Your WAF has multiple vulnerabilities that should be addressed. Review the detailed results and consider strengthening your protections."}
+											? "Your WAF is mostly effective but has a vulnerability that could be exploited. Review the specific bypass technique that succeeded and adjust your WAF rules accordingly."
+											: results.summary.successful_bypasses <= 3
+											? "Your WAF has several vulnerabilities that should be addressed. The bypass techniques that succeeded represent security gaps that attackers could potentially exploit."
+											: "Your WAF has significant vulnerabilities. Multiple bypass techniques were successful, suggesting that your current WAF configuration may not provide adequate protection against common attacks."}
 									</p>
+								</div>
+
+								{/* Recommendations */}
+								<div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+									<h4 className="font-medium mb-2 text-blue-800">
+										Recommendations
+									</h4>
+									<ul className="list-disc list-inside text-blue-700 space-y-2">
+										{results.summary.successful_bypasses > 0 && (
+											<li>
+												Review and update your WAF rules to address the
+												successful bypass techniques
+											</li>
+										)}
+										<li>
+											Implement defense in depth - don't rely solely on your WAF
+											for application security
+										</li>
+										<li>
+											Regularly test your WAF against new bypass techniques
+										</li>
+										<li>
+											Consider using a commercial WAF solution with regularly
+											updated rule sets
+										</li>
+										<li>
+											Combine WAF protection with secure coding practices and
+											regular security testing
+										</li>
+									</ul>
 								</div>
 							</div>
 						)}
 					</div>
 
-					{/* Detailed Results Section */}
-					<div className="border border-gray-200 rounded-md overflow-hidden">
-						<div
-							className="flex justify-between items-center p-4 cursor-pointer bg-gray-50 hover:bg-gray-100"
-							onClick={() => toggleSection("detailed_results")}
-						>
-							<h3 className="font-medium">Detailed Test Results</h3>
-							<span>
-								{expandedSections.includes("detailed_results") ? "▼" : "►"}
-							</span>
+					{/* Test Details Section */}
+					<div className="bg-white rounded-lg shadow-lg overflow-hidden">
+						<div className="steel-gradient text-white p-5">
+							<h3 className="text-xl font-bold">Detailed Test Results</h3>
 						</div>
-						{expandedSections.includes("detailed_results") && (
-							<div className="p-4 border-t border-gray-200">
-								{results.results.map((result, index) => (
-									<div
-										key={index}
-										className="mb-4 p-4 border rounded-md"
-										style={{
-											borderColor:
-												result.status === "Success"
-													? "#ef4444"
-													: result.status === "Blocked"
-													? "#10b981"
-													: "#f59e0b",
-											backgroundColor:
-												result.status === "Success"
-													? "#fee2e2"
-													: result.status === "Blocked"
-													? "#d1fae5"
-													: "#fef3c7",
-										}}
-									>
-										<div className="flex justify-between items-start mb-2">
-											<h4 className="font-semibold text-lg">
+						<div className="p-6">
+							{results.results.map((result, index) => (
+								<div
+									key={index}
+									className={`mb-4 p-4 rounded-lg border ${
+										result.status === "Success"
+											? "bg-red-50 border-red-200"
+											: result.status === "Blocked"
+											? "bg-emerald-50 border-emerald-200"
+											: "bg-amber-50 border-amber-200"
+									}`}
+								>
+									<div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+										<div className="flex items-center">
+											<span
+												className={`inline-block w-3 h-3 rounded-full mr-2 ${
+													result.status === "Success"
+														? "bg-red-500"
+														: result.status === "Blocked"
+														? "bg-emerald-500"
+														: "bg-amber-500"
+												}`}
+											></span>
+											<h4 className="font-bold text-gray-900">
 												{result.technique}
 											</h4>
+										</div>
+										<div className="mt-2 md:mt-0 flex items-center">
+											<span className="text-xs mr-2 text-gray-500">
+												{result.category}
+											</span>
 											<span
-												className={`px-2 py-1 rounded-full text-xs font-medium ${
+												className={`px-2 py-1 rounded text-xs font-medium ${
 													result.status === "Success"
 														? "bg-red-100 text-red-800"
 														: result.status === "Blocked"
-														? "bg-green-100 text-green-800"
-														: "bg-yellow-100 text-yellow-800"
+														? "bg-emerald-100 text-emerald-800"
+														: "bg-amber-100 text-amber-800"
 												}`}
 											>
 												{result.status}
 											</span>
 										</div>
-										<p className="text-gray-700 mb-2">{result.description}</p>
-										<div className="text-sm text-gray-600">
-											<strong>Details:</strong> {result.details}
-										</div>
 									</div>
-								))}
-							</div>
-						)}
+									<p className="text-gray-700 mb-2">{result.description}</p>
+									<div className="bg-white bg-opacity-60 p-3 rounded border text-sm">
+										<details>
+											<summary className="font-medium cursor-pointer">
+												Technical Details
+											</summary>
+											<div className="mt-2 pl-4 border-l-2 border-gray-200 text-gray-600">
+												{result.details}
+											</div>
+										</details>
+									</div>
+								</div>
+							))}
+						</div>
 					</div>
 				</div>
 			)}
 
-			<div className="bg-gray-50 rounded-lg p-6 mt-8">
-				<h2 className="text-xl font-semibold mb-4">About Smart WAF Tester</h2>
-				<p className="text-gray-600 mb-4">
-					The Smart WAF Tester is designed to help security professionals and
-					website administrators test the effectiveness of their Web Application
-					Firewall (WAF) configurations against common bypass techniques.
-				</p>
-				<p className="text-gray-600 mb-4">
-					<strong>This tool is in BETA.</strong> It provides a simulation of WAF
-					testing functionality and will be connected to our backend testing
-					engine in future releases.
-				</p>
-				<div className="bg-yellow-50 p-4 border border-yellow-100 rounded-md">
-					<h3 className="font-medium text-yellow-800 mb-2">
-						Important Disclaimer
-					</h3>
-					<p className="text-yellow-700 text-sm">
-						Only use this tool on websites you own or have explicit permission
-						to test. Unauthorized security testing may be illegal and unethical.
-						The tool is provided for educational purposes and legitimate
-						security testing only.
-					</p>
+			<div className="max-w-3xl mx-auto mt-16 mb-12">
+				<div className="bg-white rounded-lg shadow-lg overflow-hidden">
+					<div className="bg-gray-800 text-white p-6">
+						<h2 className="text-2xl font-bold">About Smart WAF Tester</h2>
+					</div>
+					<div className="p-8">
+						<p className="mb-6 text-gray-700 leading-relaxed">
+							Smart WAF Tester is a specialized tool designed to evaluate the
+							effectiveness of your Web Application Firewall (WAF) against
+							common bypass techniques, including:
+						</p>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+							<div className="bg-gray-50 rounded-lg p-5 shadow-sm">
+								<ul className="space-y-3">
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											SQL Injection bypasses
+										</span>
+									</li>
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											Cross-Site Scripting (XSS) evasions
+										</span>
+									</li>
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											HTTP Header manipulation
+										</span>
+									</li>
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											Path traversal techniques
+										</span>
+									</li>
+								</ul>
+							</div>
+							<div className="bg-gray-50 rounded-lg p-5 shadow-sm">
+								<ul className="space-y-3">
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											Command injection evasions
+										</span>
+									</li>
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											Protocol-level bypasses
+										</span>
+									</li>
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											Advanced encoding techniques
+										</span>
+									</li>
+									<li className="flex items-center">
+										<span className="mr-2 text-steelBlue">✓</span>
+										<span className="text-gray-800">
+											Character set manipulations
+										</span>
+									</li>
+								</ul>
+							</div>
+						</div>
+						<div className="mb-8">
+							<p className="text-gray-700 leading-relaxed">
+								The tester identifies vulnerabilities in your WAF configuration
+								by attempting various bypass techniques and reporting which ones
+								succeeded or were blocked.
+							</p>
+						</div>
+						<div className="saffron-gradient text-white p-6 rounded-lg shadow-md">
+							<p className="font-semibold mb-3">⚠️ Legal Disclaimer:</p>
+							<p className="text-sm leading-relaxed">
+								This tool is intended for security testing purposes only. Only
+								test websites you own or have explicit permission to test.
+								Unauthorized security testing may violate computer fraud and
+								abuse laws, terms of service agreements, and other regulations.
+								Always use this tool responsibly and ethically.
+							</p>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

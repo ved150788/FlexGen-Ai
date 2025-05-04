@@ -21,7 +21,7 @@
 	padding: 0;
 }
 
-.ticker-label {
+/* .ticker-label {
 	background: linear-gradient(to right, var(--steel-dark), var(--steel-blue));
 	color: white;
 	padding: 0 15px;
@@ -32,7 +32,7 @@
 	font-size: 14px;
 	min-width: 140px;
 	z-index: 2;
-}
+} */
 
 .news-scroll-wrapper {
 	height: 100%;

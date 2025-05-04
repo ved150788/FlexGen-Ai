@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FlexGen Email Backend
 
-## Getting Started
+A serverless backend for handling email functionality for the FlexGen.ai website contact forms and security audit requests.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Contact form email handling
+- Security audit request processing
+- CORS support
+- HTML and plain text email formatting
+
+## Deployment on Vercel
+
+This backend is designed to be deployed as a serverless function on Vercel.
+
+### Prerequisites
+
+- A Vercel account
+- SMTP email account credentials (Gmail recommended)
+
+### Deployment Steps
+
+1. Fork or clone this repository
+2. Connect the repository to your Vercel account
+3. Add the following environment variables in your Vercel project settings:
+   - `MAIL_USERNAME`: Your email address
+   - `MAIL_PASSWORD`: Your email app password
+   - `MAIL_RECEIVER`: Recipient email address
+
+For Gmail, you'll need to use an App Password. [Learn how to create one](https://support.google.com/accounts/answer/185833?hl=en).
+
+### Update Frontend API Endpoints
+
+After deployment, update your frontend forms to use the Vercel deployment URL:
+
+```typescript
+// In your form submit handlers
+const response = await fetch(
+	"https://your-vercel-deployment-url.vercel.app/api/contact",
+	{
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			name: "User Name",
+			email: "user@example.com",
+			message: "Form message",
+			// Other form fields
+		}),
+	}
+);
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## API Endpoints
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `GET /api`: Check if the server is running
+- `POST /api/contact`: Handle contact form submissions
+- `POST /api/security-audit`: Process security audit requests
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Local Development
 
-## Learn More
+For local development:
 
-To learn more about Next.js, take a look at the following resources:
+1. Create a virtual environment and activate it:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Install dependencies:
 
-## Deploy on Vercel
+```bash
+pip install -r requirements.txt
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. Create a `.env` file with your email credentials
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Run the Vercel dev server:
+
+```bash
+vercel dev
+```

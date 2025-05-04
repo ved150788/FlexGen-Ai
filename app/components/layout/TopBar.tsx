@@ -9,7 +9,7 @@ import {
 
 export default function TopBar() {
 	return (
-		<div className="steel-gradient-angle text-white text-sm py-2 px-4">
+		<div className="bg-gray-800 text-white text-sm py-2 px-4">
 			<div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center">
 				{/* Social Links */}
 				<div className="flex items-center space-x-4 mb-2 sm:mb-0">
@@ -26,7 +26,7 @@ export default function TopBar() {
 					</a>
 					<a
 						href="https://facebook.com"
-						target="_blank"
+						target="https://www.facebook.com/profile.php?id=61575770678631"
 						className="hover:text-primarySaffron transition-colors duration-200"
 						aria-label="Facebook"
 					>

@@ -70,7 +70,7 @@ export default function AboutPage() {
 				{JSON.stringify(organizationSchema)}
 			</Script>
 
-			<section className="text-center py-20 bg-gradient-to-r from-black via-gray-900 to-gray-800 text-white">
+			<section className="text-center py-20 bg-gray-800 text-white">
 				<h1 className="text-5xl font-bold mb-4">About Us</h1>
 				<p className="text-lg max-w-2xl mx-auto">
 					We're a team of cybersecurity experts on a mission to predict,
@@ -78,14 +78,13 @@ export default function AboutPage() {
 				</p>
 			</section>
 
-			{/* 👥 Meet Our Team */}
-			<div data-aos="fade-up">
-				<TeamCarousel />
-			</div>
-
 			{/* 📄 Vision / Mission / Company Info */}
 			<div data-aos="fade-up" data-aos-delay="200">
 				<CompanyOverview />
+			</div>
+			{/* 👥 Meet Our Team */}
+			<div data-aos="fade-up">
+				<TeamCarousel />
 			</div>
 		</>
 	);

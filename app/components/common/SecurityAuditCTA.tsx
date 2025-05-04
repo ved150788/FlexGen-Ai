@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import SecurityAuditModal from "./SecurityAuditModal";
+
+import SecurityAuditModalForm from "./SecurityAuditModalForm";
 
 interface Props {
 	variant?: "primary" | "secondary" | "outline";
@@ -92,7 +93,10 @@ export default function SecurityAuditCTA({
 				)}
 			</button>
 
-			<SecurityAuditModal isOpen={isModalOpen} onClose={closeModal} />
+			<SecurityAuditModalForm
+				isOpen={isModalOpen}
+				onClose={() => setIsModalOpen(false)}
+			/>
 		</>
 	);
 }

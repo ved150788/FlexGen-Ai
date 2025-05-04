@@ -38,7 +38,7 @@ export default function ServicesGrid() {
 							</p>
 							<Link
 								href={`/services/${service.slug}`}
-								className="mt-2 inline-block bg-primarySaffron text-black py-2 px-5 rounded-lg font-medium hover:bg-black hover:text-white transition-colors"
+								className="mt-2 inline-block bg-gray-800 text-white py-2 px-5 rounded-lg font-medium hover:bg-black hover:text-white transition-colors"
 							>
 								Read More
 							</Link>

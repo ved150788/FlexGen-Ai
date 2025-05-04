@@ -26,10 +26,10 @@ export default function HeroSection() {
 				</video>
 			)}
 
-			<div className="absolute top-0 left-0 w-full h-full bg-black opacity-50 z-10" />
+			<div className="absolute top-0 left-0 w-full h-full bg-gray-800 opacity-50 z-10 " />
 
 			{/* Hero Content */}
-			<div className="relative top-14 z-20 flex items-start justify-start min-h-screen text-white px-4">
+			<div className="relative top-14 z-20 flex items-start justify-start min-h-screen text-white px-4 ">
 				<div className="text-center max-w-3xl p-8">
 					<h1 className="text-5xl font-bold mb-4 text-left">
 						Cybersecurity Solutions Built to Predict, Prevent & Protect

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 
 interface Props {
 	isOpen: boolean;
@@ -11,50 +11,86 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 	const [showSuccess, setShowSuccess] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [formData, setFormData] = useState({
+		name: "",
+		email: "",
+		phone: "",
+		message: "",
+	});
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setIsSubmitting(true);
-		setError(null);
+	const handleChange = (
+		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+	) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+	};
 
-		const form = e.target as HTMLFormElement;
-		const name = (form.elements.namedItem("name") as HTMLInputElement).value;
-		const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-		const message = (form.elements.namedItem("message") as HTMLTextAreaElement)
-			.value;
-
-		// Validate form fields
-		if (!name || !email || !message) {
+	const validateForm = () => {
+		if (
+			!formData.name.trim() ||
+			!formData.email.trim() ||
+			!formData.message.trim()
+		) {
 			setError("All fields are required");
-			setIsSubmitting(false);
-			return;
+			return false;
 		}
+		setError(null);
+		return true;
+	};
+
+	const handleSubmit = async (e: FormEvent) => {
+		e.preventDefault();
+
+		if (!validateForm()) return;
+
+		setIsSubmitting(true);
 
 		try {
-			// Use the Flask backend endpoint
-			const res = await fetch("http://localhost:5000/contact", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ name, email, message }),
+			// Call the Vercel API endpoint
+			const response = await fetch(
+				"https://your-vercel-deployment-url.vercel.app/api/contact",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						name: formData.name,
+						email: formData.email,
+						message: formData.message,
+						phone: formData.phone,
+						subject: "Modal Contact Form: Quick Inquiry",
+					}),
+				}
+			);
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || "Failed to submit form");
+			}
+
+			// Reset form
+			setFormData({
+				name: "",
+				email: "",
+				phone: "",
+				message: "",
 			});
 
-			const data = await res.json();
+			// Show success message
+			setShowSuccess(true);
 
-			if (res.ok) {
-				form.reset();
-				setShowSuccess(true);
-				setTimeout(() => {
-					setShowSuccess(false);
-					onClose();
-				}, 3000);
-			} else {
-				setError(data.error || "Failed to send message. Please try again.");
-			}
+			// Close modal after 3 seconds
+			setTimeout(() => {
+				setShowSuccess(false);
+				onClose();
+			}, 3000);
 		} catch (error) {
-			setError(
-				"Server Error: Could not connect to email service. Please try again later."
-			);
-			console.error("Email submission error:", error);
+			console.error("Form submission error:", error);
+			setError("Failed to submit the form. Please try again later.");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -98,9 +134,11 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 								name="name"
 								type="text"
 								placeholder="John Doe"
-								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-gray-800"
 								disabled={isSubmitting}
 								required
+								value={formData.name}
+								onChange={handleChange}
 							/>
 						</div>
 
@@ -116,9 +154,30 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 								name="email"
 								type="email"
 								placeholder="john@example.com"
-								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-gray-800"
 								disabled={isSubmitting}
 								required
+								value={formData.email}
+								onChange={handleChange}
+							/>
+						</div>
+
+						<div>
+							<label
+								htmlFor="phone"
+								className="block text-sm font-medium text-left text-gray-700 mb-1"
+							>
+								Phone (Optional)
+							</label>
+							<input
+								id="phone"
+								name="phone"
+								type="tel"
+								placeholder="+1 (123) 456-7890"
+								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-gray-800"
+								disabled={isSubmitting}
+								value={formData.phone}
+								onChange={handleChange}
 							/>
 						</div>
 
@@ -134,9 +193,11 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 								name="message"
 								rows={4}
 								placeholder="Type your message..."
-								className="w-full border border-gray-300 p-3 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-black"
+								className="w-full border border-gray-300 p-3 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-black text-gray-800"
 								disabled={isSubmitting}
 								required
+								value={formData.message}
+								onChange={handleChange}
 							></textarea>
 						</div>
 
@@ -159,7 +220,21 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 			{showSuccess && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
 					<div className="bg-white p-6 rounded-lg shadow-lg text-center w-[90%] max-w-sm animate-fadeIn">
-						<h3 className="text-lg font-semibold mb-2">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-12 w-12 text-green-500 mx-auto mb-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M5 13l4 4L19 7"
+							/>
+						</svg>
+						<h3 className="text-lg font-semibold mb-2 text-gray-800">
 							Thank you for contacting us!
 						</h3>
 						<p className="text-sm text-gray-700">

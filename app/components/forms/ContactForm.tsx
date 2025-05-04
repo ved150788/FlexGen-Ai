@@ -1,10 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
+interface FormData {
+	name: string;
+	email: string;
+	phone: string;
+	subject: string;
+	message: string;
+}
 
 const ContactForm: React.FC = () => {
 	const [showSuccess, setShowSuccess] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [formData, setFormData] = useState<FormData>({
+		name: "",
+		email: "",
+		phone: "",
+		subject: "",
+		message: "",
+	});
+
 	const [errors, setErrors] = useState<{
 		name?: string;
 		email?: string;
@@ -12,102 +28,132 @@ const ContactForm: React.FC = () => {
 		general?: string;
 	}>({});
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setIsSubmitting(true);
+	const handleChange = (
+		e: React.ChangeEvent<
+			HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+		>
+	) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+		}));
+	};
 
-		const form = e.target as HTMLFormElement;
-		const name = (
-			form.elements.namedItem("name") as HTMLInputElement
-		).value.trim();
-		const email = (
-			form.elements.namedItem("email") as HTMLInputElement
-		).value.trim();
-		const message = (
-			form.elements.namedItem("message") as HTMLTextAreaElement
-		).value.trim();
-
-		// Inline validation
+	const validateForm = (): boolean => {
 		const newErrors: typeof errors = {};
-		if (!name) newErrors.name = "Name is required";
-		if (!email) {
+
+		if (!formData.name.trim()) newErrors.name = "Name is required";
+
+		if (!formData.email.trim()) {
 			newErrors.email = "Email is required";
-		} else if (!/^\S+@\S+\.\S+$/.test(email)) {
+		} else if (
+			!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)
+		) {
 			newErrors.email = "Enter a valid email";
 		}
-		if (!message) newErrors.message = "Message is required";
+
+		if (!formData.message.trim()) newErrors.message = "Message is required";
 
 		setErrors(newErrors);
-		if (Object.keys(newErrors).length > 0) {
-			setIsSubmitting(false);
-			return;
-		}
+		return Object.keys(newErrors).length === 0;
+	};
 
-		// Send email using Flask backend
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		setIsSubmitting(true);
+		setErrors({});
+
 		try {
-			const res = await fetch("http://localhost:5000/contact", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ name, email, message }),
+			// Call deployed Vercel API endpoint instead of local Flask server
+			const response = await fetch(
+				"https://your-vercel-deployment-url.vercel.app/api/contact",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						name: formData.name,
+						email: formData.email,
+						message: formData.message,
+						phone: formData.phone,
+						subject: "Contact Form: Inquiry",
+					}),
+				}
+			);
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.error || "Failed to submit form");
+			}
+
+			// Reset form
+			setFormData({
+				name: "",
+				email: "",
+				phone: "",
+				subject: "",
+				message: "",
 			});
 
-			const data = await res.json();
+			// Show success message
+			setShowSuccess(true);
+			setErrors({});
 
-			if (res.ok) {
-				form.reset();
-				setShowSuccess(true);
-				setErrors({});
-				setTimeout(() => setShowSuccess(false), 3000);
-			} else {
-				setErrors({
-					general: data.error || "Failed to send message. Please try again.",
-				});
-			}
+			// Hide success message after 3 seconds
+			setTimeout(() => setShowSuccess(false), 3000);
 		} catch (error) {
-			console.error("Error submitting form:", error);
+			console.error("Form submission error:", error);
 			setErrors({
-				general: "Connection error. Could not reach email service.",
+				general:
+					error instanceof Error
+						? error.message
+						: "Failed to submit the form. Please try again later.",
 			});
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
+	// Handle clicks outside the success modal to close it
+	useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (showSuccess) {
+				const modal = document.getElementById("success-modal");
+				if (modal && !modal.contains(e.target as Node)) {
+					setShowSuccess(false);
+				}
+			}
+		};
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [showSuccess]);
+
 	return (
-		<section id="contact" className="py-12 px-6 text-black steel-gradient">
-			<div className="max-w-3xl mx-auto bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-8 shadow-lg">
-				<h2 className="text-3xl font-bold text-center mb-4">Contact Us</h2>
+		<div className="text-white">
+			{errors.general && (
+				<div className="mb-4 p-3 bg-red-900/60 text-red-100 rounded-md border border-red-500">
+					{errors.general}
+				</div>
+			)}
 
-				<p className="text-center text-lg mb-6">
-					📧 Email us at:{" "}
-					<a
-						href="mailto:hello@flexgen.ai"
-						className="font-semibold underline hover:text-primarySaffron transition-colors duration-200"
-					>
-						hello@flexgen.ai
-					</a>
-				</p>
-
-				{errors.general && (
-					<div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-						{errors.general}
-					</div>
-				)}
-
-				<form
-					onSubmit={handleSubmit}
-					className="rounded-lg p-6 space-y-4 bg-white bg-opacity-5 border border-white border-opacity-20"
-				>
+			<form onSubmit={handleSubmit} className="space-y-5">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 					<div>
-						<label htmlFor="name" className="block text-sm font-medium">
-							Your Name
+						<label htmlFor="name" className="block text-sm font-medium mb-1">
+							Your Name*
 						</label>
 						<input
 							type="text"
 							id="name"
 							name="name"
+							value={formData.name}
+							onChange={handleChange}
 							placeholder="John Doe"
-							className="bg-white text-black mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-steelBlue transition-all duration-200"
+							className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
 							disabled={isSubmitting}
 						/>
 						{errors.name && (
@@ -116,73 +162,154 @@ const ContactForm: React.FC = () => {
 					</div>
 
 					<div>
-						<label htmlFor="email" className="block text-sm font-medium">
-							Email Address
+						<label htmlFor="email" className="block text-sm font-medium mb-1">
+							Email Address*
 						</label>
 						<input
 							type="email"
 							id="email"
 							name="email"
+							value={formData.email}
+							onChange={handleChange}
 							placeholder="john@example.com"
-							className="bg-white text-black mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-steelBlue transition-all duration-200"
+							className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
 							disabled={isSubmitting}
 						/>
 						{errors.email && (
 							<p className="text-red-400 text-sm mt-1">{errors.email}</p>
 						)}
 					</div>
+				</div>
 
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 					<div>
-						<label htmlFor="message" className="block text-sm font-medium">
-							Your Message
+						<label htmlFor="phone" className="block text-sm font-medium mb-1">
+							Phone (Optional)
 						</label>
-						<textarea
-							id="message"
-							name="message"
-							rows={4}
-							placeholder="Type your message"
-							className="bg-white text-black mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-steelBlue transition-all duration-200"
+						<input
+							type="tel"
+							id="phone"
+							name="phone"
+							value={formData.phone}
+							onChange={handleChange}
+							placeholder="+1 (555) 123-4567"
+							className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
 							disabled={isSubmitting}
-						></textarea>
-						{errors.message && (
-							<p className="text-red-400 text-sm mt-1">{errors.message}</p>
-						)}
+						/>
 					</div>
 
-					<button
-						type="submit"
-						className={`w-full steel-gradient font-medium px-6 py-3 rounded-lg transition-all duration-300 shadow-md ${
-							isSubmitting
-								? "opacity-70 cursor-not-allowed"
-								: "hover:saffron-gradient text-white"
-						}`}
+					<div>
+						<label htmlFor="subject" className="block text-sm font-medium mb-1">
+							Subject
+						</label>
+						<input
+							type="text"
+							id="subject"
+							name="subject"
+							value={formData.subject}
+							onChange={handleChange}
+							placeholder="How can we help?"
+							className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
+							disabled={isSubmitting}
+						/>
+					</div>
+				</div>
+
+				<div>
+					<label htmlFor="message" className="block text-sm font-medium mb-1">
+						Your Message*
+					</label>
+					<textarea
+						id="message"
+						name="message"
+						value={formData.message}
+						onChange={handleChange}
+						rows={4}
+						placeholder="Type your message here..."
+						className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-white"
 						disabled={isSubmitting}
-					>
-						{isSubmitting ? "Sending..." : "Send Message"}
-					</button>
-				</form>
-			</div>
+					></textarea>
+					{errors.message && (
+						<p className="text-red-400 text-sm mt-1">{errors.message}</p>
+					)}
+				</div>
+
+				<button
+					type="submit"
+					className={`w-full bg-gradient-to-br from-blue-600 to-blue-800 text-white font-medium px-6 py-3 rounded-lg transition-all duration-300 shadow-md flex justify-center items-center ${
+						isSubmitting
+							? "opacity-70 cursor-not-allowed"
+							: "hover:from-blue-700 hover:to-blue-900 transform hover:-translate-y-1"
+					}`}
+					disabled={isSubmitting}
+				>
+					{isSubmitting ? (
+						<>
+							<svg
+								className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle
+									className="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									strokeWidth="4"
+								></circle>
+								<path
+									className="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
+							</svg>
+							Sending...
+						</>
+					) : (
+						"Send Message"
+					)}
+				</button>
+			</form>
 
 			{/* Thank You Message */}
 			{showSuccess && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-					<div className="steel-gradient p-6 rounded-lg shadow-lg text-center w-[90%] max-w-sm animate-fadeIn">
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
+					<div
+						id="success-modal"
+						className="bg-gray-900 p-8 rounded-lg shadow-lg text-center w-[90%] max-w-sm animate-fadeIn border border-blue-500"
+					>
 						<button
 							onClick={() => setShowSuccess(false)}
-							className="absolute top-2 right-2 bg-white bg-opacity-20 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-opacity-30 transition-colors"
+							className="absolute top-2 right-2 bg-gray-700 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-gray-600 transition-colors"
 						>
 							×
 						</button>
-						<h3 className="text-lg font-semibold mb-2 text-white">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-16 w-16 text-green-500 mx-auto mb-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M5 13l4 4L19 7"
+							/>
+						</svg>
+						<h3 className="text-xl font-semibold mb-3 text-white">
 							Thank you for contacting us!
 						</h3>
-						<p className="text-sm text-white text-opacity-90">
+						<p className="text-gray-300">
 							We will get back to you as soon as possible.
 						</p>
 					</div>
 				</div>
 			)}
-		</section>
+		</div>
 	);
 };
 

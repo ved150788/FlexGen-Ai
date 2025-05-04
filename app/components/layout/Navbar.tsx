@@ -47,15 +47,15 @@ const toolsCategories = [
 		tools: [
 			{
 				name: "AI Recon Bot",
-				href: "/tools/coming-soon?tool=AI Recon Bot",
+				href: "/tools/ai-recon-bot",
 			},
 			{
 				name: "Smart WAF & Firewall Bypass Tester",
-				href: "/tools/coming-soon?tool=Smart WAF and Firewall Bypass Tester",
+				href: "/tools/smart-waf-tester",
 			},
 			{
 				name: "Form Input Vulnerability Scanner",
-				href: "/tools/coming-soon?tool=Form Input Vulnerability Scanner",
+				href: "/tools/form-input-scanner",
 			},
 			{
 				name: "AI Misconfiguration Checker",
@@ -117,7 +117,7 @@ export default function Navbar() {
 
 	return (
 		<>
-			<nav className="w-full px-6 py-4 flex items-center justify-between bg-white border-b-2 border-black">
+			<nav className="relative w-full px-6 py-4 flex items-center justify-between bg-white text-white border-b-0 ">
 				<div className="flex-1">
 					<a href="/" className="font-bold text-xl">
 						<Image
@@ -172,7 +172,7 @@ export default function Navbar() {
 									</button>
 
 									{showToolsDropdown && (
-										<div className="absolute top-full right-0 mt-2 w-72 bg-white shadow-lg rounded-md py-1 z-50">
+										<div className="absolute top-full right-0 mt-2 w-72 bg-white shadow-lg rounded-md py-1 z-50 text-black">
 											{/* Tools Dashboard Link */}
 											<Link
 												href="/tools"

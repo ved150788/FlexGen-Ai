@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ModalContactForm from "../common/ModalContactForm";
+import SecurityAuditModalForm from "../common/SecurityAuditModalForm";
 
 interface SecurityAuditCTAProps {
 	variant?: "primary" | "secondary" | "outline";
@@ -22,7 +22,8 @@ export default function SecurityAuditCTA({
 
 	// Variant styles
 	const variantStyles = {
-		primary: "bg-primarySaffron text-black hover:bg-white",
+		primary:
+			"bg-gradient-to-br from-slate-900 to-blue-900 text-white hover:bg-white",
 		secondary: "bg-white text-black hover:bg-gray-800 hover:text-white",
 		outline:
 			"bg-transparent border border-white text-white hover:bg-white hover:text-black",
@@ -52,7 +53,7 @@ export default function SecurityAuditCTA({
 			</button>
 
 			{isModalOpen && (
-				<ModalContactForm
+				<SecurityAuditModalForm
 					isOpen={isModalOpen}
 					onClose={() => setIsModalOpen(false)}
 				/>

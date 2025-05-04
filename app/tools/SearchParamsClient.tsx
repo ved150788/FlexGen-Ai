@@ -86,8 +86,9 @@ const tools = [
 		name: "Form Input Vulnerability Scanner",
 		description: "Automatically tests web forms for common vulnerabilities",
 		category: "Scanning & Assessment",
-		status: "coming-soon",
+		status: "available",
 		icon: "📝",
+		beta: true,
 	},
 	{
 		id: "ai-misconfiguration-checker",
@@ -103,8 +104,9 @@ const tools = [
 		name: "Flexgen Web App Pentester Pro",
 		description: "Enterprise-grade web application penetration testing suite",
 		category: "Scanning & Assessment",
-		status: "coming-soon",
+		status: "available",
 		icon: "🕸️",
+		beta: true,
 	},
 	{
 		id: "ai-api-fuzzer",
@@ -161,8 +163,8 @@ export default function SearchParamsClient() {
 						onClick={() => setSelectedCategory(category)}
 						className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
 							selectedCategory === category
-								? "bg-primarySaffron text-black"
-								: "bg-gray-100 text-gray-800 hover:bg-gray-200"
+								? "bg-gray-800 text-white"
+								: "bg-gray-100 hover:bg-gray-200 text-black"
 						}`}
 					>
 						{category}
@@ -210,19 +212,26 @@ export default function SearchParamsClient() {
 										href={`/tools/coming-soon?tool=${encodeURIComponent(
 											tool.name
 										)}`}
-										className="inline-block w-full text-center bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition"
+										className="inline-block w-full text-center 
+                 bg-gray-800 text-white 
+                 py-2 px-4 rounded-md transition-colors duration-200 
+                 hover:bg-none hover:bg-black hover:text-white"
 									>
 										Learn More
 									</Link>
 								) : (
 									<Link
 										href={`/tools/${tool.id}`}
-										className="inline-block w-full text-center bg-primarySaffron text-black py-2 px-4 rounded-md hover:bg-yellow-500 transition"
+										className="inline-block w-full text-center 
+										bg-gray-800 text-white 
+										py-2 px-4 rounded-md transition-colors duration-200 
+										hover:bg-none hover:bg-black hover:text-white"
 									>
 										Launch Tool
 									</Link>
 								)}
 							</div>
+
 							<div className="mt-4 text-xs text-gray-500">
 								Category: {tool.category}
 							</div>

@@ -75,127 +75,78 @@ export default function ContactPage() {
 				{JSON.stringify(breadcrumbSchema)}
 			</Script>
 
-			{/* Hero Section */}
-			<div className="bg-gradient-to-br from-gray-900 to-black text-white">
+			<div className="bg-gray-800 text-white min-h-screen">
+				{/* Hero Section */}
 				<HeroContact />
 
-				{/* Main Contact Section - Modern Grid Layout */}
-				<section className="py-20 px-6 bg-gradient-to-b from-gray-50 to-gray-100">
+				{/* Main Contact Section */}
+				<section className="py-20 px-6 bg-gray-800">
 					<div className="max-w-6xl mx-auto">
 						<div className="text-center mb-16">
-							<h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+							<h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
 								Get in Touch
 							</h2>
-							<p className="text-gray-600 max-w-2xl mx-auto">
+							<p className="text-gray-300 max-w-2xl mx-auto">
 								Have questions about our AI solutions? Ready to transform your
 								business? Our team of experts is here to help you navigate the
 								world of artificial intelligence.
 							</p>
 						</div>
 
-						<div className="grid md:grid-cols-3 gap-8">
-							{/* Contact Cards */}
-							<div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center text-center hover:shadow-xl transition duration-300 transform hover:-translate-y-1">
-								<div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-									<FaMapMarkerAlt className="text-blue-600 text-2xl" />
-								</div>
-								<h3 className="text-xl font-semibold text-gray-900 mb-2">
-									Visit Our Office
-								</h3>
-								<p className="text-gray-600 mb-4">
-									123 Cyber Street, San Francisco, CA 94105
-								</p>
-								<a
-									href="https://maps.google.com"
-									target="_blank"
-									rel="noopener noreferrer"
-									className="text-blue-600 font-medium hover:text-blue-800"
-								>
-									View on Map
-								</a>
-							</div>
-
-							<div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center text-center hover:shadow-xl transition duration-300 transform hover:-translate-y-1">
-								<div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-									<FaPhone className="text-green-600 text-2xl" />
-								</div>
-								<h3 className="text-xl font-semibold text-gray-900 mb-2">
-									Call Us
-								</h3>
-								<p className="text-gray-600 mb-4">+1-555-123-4567</p>
-								<p className="text-gray-600">Monday to Friday, 9am - 6pm</p>
-							</div>
-
-							<div className="bg-white p-8 rounded-2xl shadow-lg flex flex-col items-center text-center hover:shadow-xl transition duration-300 transform hover:-translate-y-1">
-								<div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-									<FaEnvelope className="text-purple-600 text-2xl" />
-								</div>
-								<h3 className="text-xl font-semibold text-gray-900 mb-2">
-									Email Us
-								</h3>
-								<p className="text-gray-600 mb-4">contact@flexgen.ai</p>
-								<p className="text-gray-600">We'll respond within 24 hours</p>
-							</div>
-						</div>
-
-						{/* Form and Map Section */}
-						<div className="mt-16 grid md:grid-cols-5 gap-8 items-start">
+						{/* Form and Info Section */}
+						<div className="grid md:grid-cols-5 gap-8 items-start">
 							{/* Contact Form */}
-							<div className="md:col-span-3 bg-white rounded-2xl shadow-xl p-8 md:p-10">
-								<h3 className="text-2xl font-bold text-gray-900 mb-6">
+							<div className="md:col-span-3 bg-gray-900 rounded-2xl shadow-xl p-8 md:p-10 border border-gray-700">
+								<h3 className="text-2xl font-bold text-white mb-6">
 									Send Us a Message
 								</h3>
-								<p className="text-gray-600 mb-8">
+								<p className="text-gray-300 mb-8">
 									Fill out the form below and our team will get back to you as
 									soon as possible.
 								</p>
 								<ContactForm />
 							</div>
 
-							{/* Map and Additional Info */}
+							{/* Additional Info */}
 							<div className="md:col-span-2">
-								<div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-									<div className="h-64 w-full relative">
-										{/* <Image
-											// src="/Images/icons8-about-us-64.png"
-											alt="Office Location Map"
-											fill
-											className="object-cover"
-										/> */}
-									</div>
-									<div className="p-6">
-										<h4 className="font-semibold text-gray-900 mb-4">
-											About Us
-										</h4>
-										{/* <ul className="space-y-2 text-gray-600">
-											<li className="flex items-center">
-												<FaClock className="mr-2 text-blue-600" />
-												<span>Monday - Friday: 9:00 AM - 6:00 PM</span>
-											</li>
-											<li className="flex items-center">
-												<FaClock className="mr-2 text-blue-600" />
-												<span>Saturday: 10:00 AM - 4:00 PM</span>
-											</li>
-											<li className="flex items-center">
-												<FaClock className="mr-2 text-blue-600" />
-												<span>Sunday: Closed</span>
-											</li>
-										</ul> */}
-										<p className="text-black">
-											We’re passionate about cybersecurity—and committed to
-											earning your trust. Ready to secure your digital future?
-											Contact us today and let’s build a safer tomorrow
-											together.
-										</p>
-									</div>
+								<div className="bg-gray-900 rounded-2xl shadow-xl p-8 mb-8 border border-gray-700">
+									<h4 className="font-semibold text-white text-xl mb-4">
+										About Us
+									</h4>
+									<p className="text-gray-300">
+										We're passionate about cybersecurity—and committed to
+										earning your trust. Ready to secure your digital future?
+										Contact us today and let's build a safer tomorrow together.
+									</p>
+								</div>
+
+								{/* Operating Hours */}
+								<div className="bg-gray-900 rounded-2xl shadow-xl p-8 mb-8 border border-gray-700">
+									<h4 className="font-semibold text-white text-xl mb-4">
+										Operating Hours
+									</h4>
+									<ul className="space-y-3 text-gray-300">
+										<li className="flex items-center">
+											<FaClock className="mr-3 text-blue-400" />
+											<span>Monday - Friday: 9:00 AM - 6:00 PM</span>
+										</li>
+										<li className="flex items-center">
+											<FaClock className="mr-3 text-blue-400" />
+											<span>Saturday: 10:00 AM - 4:00 PM</span>
+										</li>
+										<li className="flex items-center">
+											<FaClock className="mr-3 text-blue-400" />
+											<span>Sunday: Closed</span>
+										</li>
+									</ul>
 								</div>
 
 								{/* Social Media Links */}
-								<div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-xl p-8 text-white">
+								<div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl shadow-xl p-8 text-white border border-gray-700">
 									<h4 className="font-semibold text-xl mb-4">
 										Connect with Us
 									</h4>
-									<p className="mb-6 text-blue-100">
+									<p className="mb-6 text-gray-300">
 										Follow us on social media to stay updated with the latest in
 										AI technology and industry insights.
 									</p>
@@ -204,7 +155,7 @@ export default function ContactPage() {
 											href="https://linkedin.com"
 											target="_blank"
 											rel="noopener noreferrer"
-											className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition"
+											className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition"
 										>
 											<FaLinkedin className="text-white text-xl" />
 										</a>
@@ -212,7 +163,7 @@ export default function ContactPage() {
 											href="https://twitter.com"
 											target="_blank"
 											rel="noopener noreferrer"
-											className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition"
+											className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition"
 										>
 											<FaTwitter className="text-white text-xl" />
 										</a>
@@ -220,7 +171,7 @@ export default function ContactPage() {
 											href="https://facebook.com"
 											target="_blank"
 											rel="noopener noreferrer"
-											className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition"
+											className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition"
 										>
 											<FaFacebook className="text-white text-xl" />
 										</a>
@@ -232,12 +183,12 @@ export default function ContactPage() {
 				</section>
 
 				{/* FAQ Section */}
-				<section className="py-20 px-6 bg-white">
+				<section className="py-20 px-6 bg-gray-900">
 					<div className="max-w-4xl mx-auto text-center">
-						<h2 className="text-3xl font-bold text-gray-900 mb-4">
+						<h2 className="text-3xl font-bold text-white mb-4">
 							Frequently Asked Questions
 						</h2>
-						<p className="text-gray-600 mb-12">
+						<p className="text-gray-300 mb-12">
 							Find answers to some of the most common questions about our AI
 							solutions and services.
 						</p>
@@ -267,12 +218,12 @@ export default function ContactPage() {
 							].map((faq, index) => (
 								<div
 									key={index}
-									className="bg-gray-50 rounded-xl p-6 shadow-sm"
+									className="bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-700 hover:border-blue-400 transition-colors duration-300"
 								>
-									<h3 className="text-xl font-semibold text-gray-900 mb-3">
+									<h3 className="text-xl font-semibold text-white mb-3">
 										{faq.question}
 									</h3>
-									<p className="text-gray-600">{faq.answer}</p>
+									<p className="text-gray-300">{faq.answer}</p>
 								</div>
 							))}
 						</div>
@@ -280,10 +231,8 @@ export default function ContactPage() {
 				</section>
 
 				{/* Enhanced Contact Info and Support CTA */}
-				<div className="bg-gray-900">
-					<ContactInfo />
-					<SupportCTA />
-				</div>
+				<ContactInfo />
+				<SupportCTA />
 			</div>
 		</>
 	);

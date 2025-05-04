@@ -185,6 +185,22 @@ b {
 	font-weight: 900;
 }
 
+/* Nav Border */
+
+nav::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	height: 2px; /* same as border-b-8 */
+	width: 100%;
+	background: linear-gradient(
+		to bottom right,
+		#0f172a,
+		#1e3a8a
+	); /* slate-900 to blue-900 */
+}
+
 @keyframes scroll {
 	0% {
 		transform: translateX(0%);

@@ -307,31 +307,6 @@ export default function SearchParamsClient() {
 						</div>
 					)}
 				</div>
-
-				{/* Newsletter CTA */}
-				<div className="bg-gradient-to-r from-gray-900 to-black rounded-xl p-8 text-white shadow-xl">
-					<div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between">
-						<div className="mb-6 md:mb-0 md:mr-8">
-							<h3 className="text-2xl font-bold mb-2">Stay in the know</h3>
-							<p className="text-gray-300">
-								Subscribe to our newsletter for the latest cybersecurity
-								insights and updates.
-							</p>
-						</div>
-						<div className="w-full md:w-auto flex-shrink-0">
-							<div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-								<input
-									type="email"
-									placeholder="Your email address"
-									className="px-4 py-2 rounded-md text-black focus:outline-none focus:ring-2 focus:ring-primarySaffron"
-								/>
-								<button className="bg-primarySaffron text-black px-6 py-2 rounded-md hover:bg-yellow-500 transition whitespace-nowrap">
-									Subscribe
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
 			</div>
 		</>
 	);

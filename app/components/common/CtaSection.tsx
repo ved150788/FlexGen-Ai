@@ -17,15 +17,23 @@ export default function CtaSection() {
 				</p>
 
 				{/* CTA Button */}
-				<button
-					onClick={() => setIsOpen(true)}
-					className="px-6 py-3 font-semibold border border-black rounded-lg transition
-	bg-white text-black hover:bg-black hover:text-white
-	mt-4
-	self-center md:self-start md:-ml-100"
-				>
-					Contact Now
-				</button>
+				<div className="flex items-center justify-center ">
+					<button
+						onClick={() => setIsOpen(true)}
+						className="px-6 py-3 font-semibold border border-black rounded-lg transition
+		bg-gray-800 to-blue-900 text-white hover:bg-black hover:text-white"
+					>
+						Contact Now
+					</button>
+
+					{/* Modal */}
+					{isOpen && (
+						<ModalContactForm
+							isOpen={isOpen}
+							onClose={() => setIsOpen(false)}
+						/>
+					)}
+				</div>
 			</div>
 			{/* Modal */}
 			{isOpen && (

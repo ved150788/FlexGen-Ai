@@ -15,7 +15,7 @@ export default function BlogPage() {
 	return (
 		<div className="bg-gray-50">
 			{/* Hero Section */}
-			<div className="bg-gradient-to-r from-gray-900 to-black text-white">
+			<div className="bg-gray-800 text-white">
 				<div className="max-w-7xl mx-auto px-4 py-16 md:py-24">
 					<div className="mb-8">
 						<Breadcrumb

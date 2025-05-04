@@ -45,8 +45,8 @@ const reasons = [
 
 export default function WhyChooseUs() {
 	return (
-		<section className="steel-gradient text-white py-20">
-			<div className="max-w-6xl mx-auto px-6 text-center">
+		<section className="bg-gray-800 text-white ">
+			<div className="max-w-6xl p-8 rounded-lg shadow-md mx-auto text-center ">
 				<p className="text-sm font-semibold uppercase text-white text-opacity-80">
 					Some Reasons
 				</p>

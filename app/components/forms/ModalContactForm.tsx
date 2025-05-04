@@ -9,9 +9,13 @@ interface Props {
 
 export default function ModalContactForm({ isOpen, onClose }: Props) {
 	const [showSuccess, setShowSuccess] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		setIsSubmitting(true);
+		setError(null);
 
 		const form = e.target as HTMLFormElement;
 		const name = (form.elements.namedItem("name") as HTMLInputElement).value;
@@ -19,12 +23,21 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 		const message = (form.elements.namedItem("message") as HTMLTextAreaElement)
 			.value;
 
+		// Validate form fields
+		if (!name || !email || !message) {
+			setError("All fields are required");
+			setIsSubmitting(false);
+			return;
+		}
+
 		try {
 			const res = await fetch("http://localhost:5000/contact", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ name, email, message }),
 			});
+
+			const data = await res.json();
 
 			if (res.ok) {
 				form.reset();
@@ -34,11 +47,15 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 					onClose();
 				}, 3000);
 			} else {
-				const err = await res.json();
-				alert("Failed to send message: " + err.error);
+				setError(data.error || "Failed to send message. Please try again.");
 			}
 		} catch (error) {
-			alert("Server Error: " + error);
+			setError(
+				"Server Error: Could not connect to email service. Please try again later."
+			);
+			console.error("Email submission error:", error);
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
@@ -52,6 +69,7 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 					<button
 						className="absolute top-3 right-3 text-black text-xl font-bold hover:text-red-500"
 						onClick={onClose}
+						disabled={isSubmitting}
 					>
 						&times;
 					</button>
@@ -59,6 +77,12 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 					<h2 className="text-2xl font-semibold mb-6 text-center">
 						Contact Us
 					</h2>
+
+					{error && (
+						<div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+							{error}
+						</div>
+					)}
 
 					<form onSubmit={handleSubmit} className="space-y-4">
 						<div>
@@ -70,9 +94,12 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 							</label>
 							<input
 								id="name"
+								name="name"
 								type="text"
 								placeholder="John Doe"
-								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-gray-800"
+								disabled={isSubmitting}
+								required
 							/>
 						</div>
 
@@ -85,9 +112,12 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 							</label>
 							<input
 								id="email"
+								name="email"
 								type="email"
 								placeholder="john@example.com"
-								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+								className="w-full border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-black text-gray-800"
+								disabled={isSubmitting}
+								required
 							/>
 						</div>
 
@@ -100,17 +130,25 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 							</label>
 							<textarea
 								id="message"
+								name="message"
 								rows={4}
 								placeholder="Type your message..."
-								className="w-full border border-gray-300 p-3 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-black"
+								className="w-full border border-gray-300 p-3 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-black text-gray-800"
+								disabled={isSubmitting}
+								required
 							></textarea>
 						</div>
 
 						<button
 							type="submit"
-							className="w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 transition"
+							className={`w-full py-3 rounded-md transition ${
+								isSubmitting
+									? "bg-gray-400 cursor-not-allowed"
+									: "bg-black text-white hover:bg-gray-800"
+							}`}
+							disabled={isSubmitting}
 						>
-							Submit
+							{isSubmitting ? "Sending..." : "Submit"}
 						</button>
 					</form>
 				</div>
@@ -120,7 +158,21 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 			{showSuccess && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
 					<div className="bg-white p-6 rounded-lg shadow-lg text-center w-[90%] max-w-sm animate-fadeIn">
-						<h3 className="text-lg font-semibold mb-2">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							className="h-12 w-12 text-green-500 mx-auto mb-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={2}
+								d="M5 13l4 4L19 7"
+							/>
+						</svg>
+						<h3 className="text-lg font-semibold mb-2 text-gray-800">
 							Thank you for contacting us!
 						</h3>
 						<p className="text-sm text-gray-700">
