@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 interface Props {
-	params: Promise<{ slug: string }>;
+	params: { slug: string };
 }
 
 export async function generateStaticParams() {
@@ -17,8 +17,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-	// Properly await params
-	const { slug } = await params;
+	// No need to await params
+	const { slug } = params;
 
 	const service = services.find((s) => s.slug === slug);
 	if (!service) return {};
@@ -66,8 +66,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ServiceDetail({ params }: Props) {
-	// Properly await params
-	const { slug } = await params;
+	// No need to await params
+	const { slug } = params;
 
 	const service = services.find((s) => s.slug === slug);
 	if (!service) return notFound();

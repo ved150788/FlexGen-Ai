@@ -5,10 +5,10 @@ import { Metadata } from "next";
 export async function generateMetadata({
 	params,
 }: {
-	params: Promise<{ slug: string }>;
+	params: { slug: string };
 }): Promise<Metadata> {
-	// Await the params promise
-	const { slug } = await params;
+	// No need to await the params
+	const { slug } = params;
 
 	// Find the post with the matching slug
 	const post = blogs.find((b) => b.slug === slug);
