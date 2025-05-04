@@ -1,0 +1,10 @@
+# Ignore git submodules
+FlexGen-Ai/
+FlexGen-Ai-1/
+
+# Ignore other unnecessary files
+.git/
+.gitmodules
+*.bak
+package.json.bak*
+create-clean-json.js 
