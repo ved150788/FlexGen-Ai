@@ -7,4 +7,9 @@ FlexGen-Ai-1/
 .gitmodules
 *.bak
 package.json.bak*
-create-clean-json.js 
+create-clean-json.js
+clean-package-lock.js
+*.clean
+
+# Ignore temporary cleaning scripts
+*.clean 
