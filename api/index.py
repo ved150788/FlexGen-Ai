@@ -1,5 +1,4 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask import Flask, Response, request, jsonify
 import smtplib
 from email.message import EmailMessage
 import os
@@ -15,19 +14,14 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-CORS(app)
-
 # Email configuration
 EMAIL = os.getenv("MAIL_USERNAME")
 PASSWORD = os.getenv("MAIL_PASSWORD")
 TO = os.getenv("MAIL_RECEIVER")
 
-# Contact form endpoint
-@app.route("/api/contact", methods=["POST"])
-def contact():
+def contact_handler(request_data):
     try:
-        data = request.get_json()
+        data = request_data
         
         # Extract data
         name = data.get("name")
@@ -41,7 +35,7 @@ def contact():
         # Validate required fields
         if not name or not email or not message:
             logger.warning("Contact form validation failed - missing required fields")
-            return jsonify({"error": "All fields are required"}), 400
+            return {"error": "All fields are required"}, 400
         
         # Create email message
         msg = EmailMessage()
@@ -89,21 +83,19 @@ def contact():
                 smtp.send_message(msg)
                 
             logger.info(f"Contact email sent successfully for {email}")
-            return jsonify({"message": "Your message has been sent successfully!"}), 200
+            return {"message": "Your message has been sent successfully!"}, 200
             
         except Exception as e:
             logger.error(f"SMTP error while sending contact email: {str(e)}")
-            return jsonify({"error": f"Email sending failed: {str(e)}"}), 500
+            return {"error": f"Email sending failed: {str(e)}"}, 500
             
     except Exception as e:
         logger.error(f"Unexpected error in contact endpoint: {str(e)}")
-        return jsonify({"error": "An unexpected error occurred"}), 500
+        return {"error": "An unexpected error occurred"}, 500
 
-# Security audit form endpoint
-@app.route("/api/security-audit", methods=["POST"])
-def security_audit():
+def security_audit_handler(request_data):
     try:
-        data = request.get_json()
+        data = request_data
         
         # Log the received data (redact sensitive info in production)
         logger.info(f"Received security audit request from {data.get('contactEmail')}")
@@ -219,23 +211,74 @@ def security_audit():
                 smtp.send_message(msg)
                 
             logger.info(f"Security audit email sent successfully for {data.get('contactEmail')}")
-            return jsonify({"success": True, "message": "Your security audit request has been submitted successfully!"}), 200
+            return {"success": True, "message": "Your security audit request has been submitted successfully!"}, 200
             
         except Exception as e:
             logger.error(f"SMTP error while sending security audit email: {str(e)}")
             # Return success for UI flow
             logger.info("Returning success despite email error")
-            return jsonify({"success": True, "message": "Your request has been received. Our team will contact you soon."}), 200
+            return {"success": True, "message": "Your request has been received. Our team will contact you soon."}, 200
             
     except Exception as e:
         logger.error(f"Unexpected error in security audit endpoint: {str(e)}")
-        return jsonify({"success": True, "message": "Your request has been received. Our team will contact you soon."}), 200
+        return {"success": True, "message": "Your request has been received. Our team will contact you soon."}, 200
 
-# Default route to check if server is running
-@app.route("/api", methods=["GET"])
-def index():
-    return jsonify({
+def index_handler():
+    return {
         "status": "running",
         "message": "FlexGen Email Backend is running",
         "endpoints": ["/api/contact", "/api/security-audit"]
-    }), 200 
+    }, 200
+
+def handler(request, context):
+    """Main handler function for Vercel serverless deployment"""
+    
+    # Add CORS headers
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    }
+    
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        return Response(
+            status=200,
+            headers=headers
+        )
+    
+    # Get path and method
+    path = request.path
+    method = request.method
+    
+    # API routes
+    if path == "/api/contact" and method == "POST":
+        result, status_code = contact_handler(request.json)
+        return Response(
+            json.dumps(result),
+            status=status_code,
+            headers={"Content-Type": "application/json", **headers}
+        )
+    
+    elif path == "/api/security-audit" and method == "POST":
+        result, status_code = security_audit_handler(request.json)
+        return Response(
+            json.dumps(result),
+            status=status_code,
+            headers={"Content-Type": "application/json", **headers}
+        )
+    
+    elif path == "/api" and method == "GET":
+        result, status_code = index_handler()
+        return Response(
+            json.dumps(result),
+            status=status_code,
+            headers={"Content-Type": "application/json", **headers}
+        )
+    
+    # Not found
+    return Response(
+        json.dumps({"error": "Not found"}),
+        status=404,
+        headers={"Content-Type": "application/json", **headers}
+    ) 
