@@ -1,15 +1,39 @@
-# Ignore git submodules
-FlexGen-Ai/
-FlexGen-Ai-1/
-
-# Ignore other unnecessary files
+# Ignore git related files
 .git/
 .gitmodules
+.gitignore
+
+# Ignore submodules and duplicated project folders
+FlexGen-Ai/
+FlexGen-Ai-1/
+strapi-backend/
+flask-email-backend/
+tools/
+.venv/
+node_modules/
+
+# Ignore temporary and backup files
 *.bak
-package.json.bak*
+*.bak*
+*.clean
 create-clean-json.js
 clean-package-lock.js
-*.clean
+-files --others --exclude-standard
+structure.txt
 
-# Ignore temporary cleaning scripts
-*.clean 
+# Keep only essential files
+# This ensures only the main project is deployed
+package.json
+package-lock.json
+vercel.json
+api/
+app/
+lib/
+public/
+data/
+next.config.ts
+postcss.config.js
+tailwind.config.js
+tsconfig.json
+next-env.d.ts
+README.md 
