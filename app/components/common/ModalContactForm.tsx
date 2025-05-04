@@ -49,23 +49,20 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 		setIsSubmitting(true);
 
 		try {
-			// Call the Vercel API endpoint
-			const response = await fetch(
-				"https://your-vercel-deployment-url.vercel.app/api/contact",
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						name: formData.name,
-						email: formData.email,
-						message: formData.message,
-						phone: formData.phone,
-						subject: "Modal Contact Form: Quick Inquiry",
-					}),
-				}
-			);
+			// Call the Vercel deployed API endpoint
+			const response = await fetch("/api/contact", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					name: formData.name,
+					email: formData.email,
+					message: formData.message,
+					phone: formData.phone,
+					subject: "Modal Contact Form: Quick Inquiry",
+				}),
+			});
 
 			if (!response.ok) {
 				const errorData = await response.json();
@@ -82,7 +79,7 @@ export default function ModalContactForm({ isOpen, onClose }: Props) {
 
 			// Show success message
 			setShowSuccess(true);
-
+			
 			// Close modal after 3 seconds
 			setTimeout(() => {
 				setShowSuccess(false);

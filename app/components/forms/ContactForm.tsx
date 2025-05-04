@@ -65,23 +65,20 @@ const ContactForm: React.FC = () => {
 		setErrors({});
 
 		try {
-			// Call deployed Vercel API endpoint instead of local Flask server
-			const response = await fetch(
-				"https://your-vercel-deployment-url.vercel.app/api/contact",
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						name: formData.name,
-						email: formData.email,
-						message: formData.message,
-						phone: formData.phone,
-						subject: "Contact Form: Inquiry",
-					}),
-				}
-			);
+			// Call the Vercel deployed API endpoint
+			const response = await fetch("/api/contact", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					name: formData.name,
+					email: formData.email,
+					message: formData.message,
+					phone: formData.phone,
+					subject: "Contact Form: Inquiry",
+				}),
+			});
 
 			const data = await response.json();
 
