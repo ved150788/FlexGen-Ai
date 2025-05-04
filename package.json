@@ -4,5 +4,8 @@
 	"description": "Serverless email backend for FlexGen.ai",
 	"engines": {
 		"node": ">=14.0.0"
+	},
+	"scripts": {
+		"build": "echo 'Build step not required for Python serverless functions'"
 	}
 }
