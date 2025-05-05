@@ -1,4 +1,3 @@
-from http.server import BaseHTTPRequestHandler
 import smtplib
 from email.message import EmailMessage
 import os
@@ -19,21 +18,24 @@ EMAIL = os.getenv("MAIL_USERNAME")
 PASSWORD = os.getenv("MAIL_PASSWORD")
 TO = os.getenv("MAIL_RECEIVER")
 
-class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
+def handler(request):
+    # Handle request based on method
+    if request.method == "OPTIONS":
         # Handle CORS preflight request
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
+        return {
+            "status": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type"
+            },
+            "body": ""
+        }
     
-    def do_POST(self):
+    if request.method == "POST":
         try:
-            # Read request body
-            content_length = int(self.headers['Content-Length'])
-            body = self.rfile.read(content_length)
-            data = json.loads(body)
+            # Parse request body
+            data = json.loads(request.body)
             
             # Log the received data (redact sensitive info in production)
             logger.info(f"Received security audit request from {data.get('contactEmail')}")
@@ -149,28 +151,45 @@ class handler(BaseHTTPRequestHandler):
                     smtp.send_message(msg)
                     
                 logger.info(f"Security audit email sent successfully for {data.get('contactEmail')}")
-                self.send_success_response({"success": True, "message": "Your security audit request has been submitted successfully!"})
+                return {
+                    "status": 200,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {"success": True, "message": "Your security audit request has been submitted successfully!"}
+                }
                 
             except Exception as e:
                 logger.error(f"SMTP error while sending security audit email: {str(e)}")
                 # Return success for UI flow
                 logger.info("Returning success despite email error")
-                self.send_success_response({"success": True, "message": "Your request has been received. Our team will contact you soon."})
+                return {
+                    "status": 200,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {"success": True, "message": "Your request has been received. Our team will contact you soon."}
+                }
                 
         except Exception as e:
             logger.error(f"Unexpected error in security audit endpoint: {str(e)}")
-            self.send_success_response({"success": True, "message": "Your request has been received. Our team will contact you soon."})
+            return {
+                "status": 200,
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
+                "body": {"success": True, "message": "Your request has been received. Our team will contact you soon."}
+            }
     
-    def send_success_response(self, data):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode())
-    
-    def send_error_response(self, status_code, data):
-        self.send_response(status_code)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode()) 
+    # Default response for unsupported methods
+    return {
+        "status": 405,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+        },
+        "body": {"success": False, "message": "Method not allowed"}
+    } 

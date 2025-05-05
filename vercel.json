@@ -6,7 +6,10 @@
 	"cleanUrls": true,
 	"functions": {
 		"api/python/**/*.py": {
-			"runtime": "python3.9"
+			"runtime": "vercel-python@3.9",
+			"memory": 512,
+			"maxDuration": 10
 		}
-	}
+	},
+	"installCommand": "pip install -r api/python/requirements.txt && npm install"
 }

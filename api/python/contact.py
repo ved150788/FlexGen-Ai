@@ -1,4 +1,3 @@
-from http.server import BaseHTTPRequestHandler
 import smtplib
 from email.message import EmailMessage
 import os
@@ -19,21 +18,24 @@ EMAIL = os.getenv("MAIL_USERNAME")
 PASSWORD = os.getenv("MAIL_PASSWORD")
 TO = os.getenv("MAIL_RECEIVER")
 
-class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
+def handler(request):
+    # Handle request based on method
+    if request.method == "OPTIONS":
         # Handle CORS preflight request
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
+        return {
+            "status": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type"
+            },
+            "body": ""
+        }
     
-    def do_POST(self):
+    if request.method == "POST":
         try:
-            # Read request body
-            content_length = int(self.headers['Content-Length'])
-            body = self.rfile.read(content_length)
-            data = json.loads(body)
+            # Parse request body
+            data = json.loads(request.body)
             
             # Extract data
             name = data.get("name")
@@ -47,8 +49,14 @@ class handler(BaseHTTPRequestHandler):
             # Validate required fields
             if not name or not email or not message:
                 logger.warning("Contact form validation failed - missing required fields")
-                self.send_error_response(400, {"error": "All fields are required"})
-                return
+                return {
+                    "status": 400,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {"error": "All fields are required"}
+                }
             
             # Create email message
             msg = EmailMessage()
@@ -96,26 +104,43 @@ class handler(BaseHTTPRequestHandler):
                     smtp.send_message(msg)
                     
                 logger.info(f"Contact email sent successfully for {email}")
-                self.send_success_response({"message": "Your message has been sent successfully!"})
+                return {
+                    "status": 200,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {"message": "Your message has been sent successfully!"}
+                }
                 
             except Exception as e:
                 logger.error(f"SMTP error while sending contact email: {str(e)}")
-                self.send_error_response(500, {"error": f"Email sending failed: {str(e)}"})
+                return {
+                    "status": 500,
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    "body": {"error": f"Email sending failed: {str(e)}"}
+                }
                 
         except Exception as e:
             logger.error(f"Unexpected error in contact endpoint: {str(e)}")
-            self.send_error_response(500, {"error": "An unexpected error occurred"})
+            return {
+                "status": 500,
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                },
+                "body": {"error": "An unexpected error occurred"}
+            }
     
-    def send_success_response(self, data):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode())
-    
-    def send_error_response(self, status_code, data):
-        self.send_response(status_code)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode()) 
+    # Default response for unsupported methods
+    return {
+        "status": 405,
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+        },
+        "body": {"error": "Method not allowed"}
+    } 
