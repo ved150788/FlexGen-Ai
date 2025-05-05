@@ -144,16 +144,13 @@ export default function SecurityAuditModalForm({
 
 		try {
 			// Call the Vercel API endpoint instead of local Flask server
-			const response = await fetch(
-				"https://your-vercel-deployment-url.vercel.app/api/security-audit",
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(formData),
-				}
-			).catch((error) => {
+			const response = await fetch("/api/security-audit", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(formData),
+			}).catch((error) => {
 				// Handle network error and proceed with success flow
 				// In a real app, you might want to show an error
 				console.log("API Error (proceeding with success flow):", error);

@@ -11,16 +11,13 @@ const SecurityAuditModalForm: React.FC = () => {
 
 		try {
 			// Call the Vercel API endpoint
-			const response = await fetch(
-				"https://your-vercel-deployment-url.vercel.app/api/security-audit",
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(formData),
-				}
-			).catch((error) => {
+			const response = await fetch("/api/security-audit", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(formData),
+			}).catch((error) => {
 				// Handle network error and proceed with success flow
 				console.log("API Error (proceeding with success flow):", error);
 				return new Response(JSON.stringify({ success: true }), {

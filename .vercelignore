@@ -1,26 +1,4 @@
-# Ignore git related files
+# Only ignore these directories
+node_modules
 .git
-.gitignore
-.gitmodules
-
-# Ignore submodules and duplicated project folders
-FlexGen-Ai/
-FlexGen-Ai-1/
-strapi-backend/
-flask-email-backend/
-tools/
-.venv/
-node_modules/
-
-# Ignore temporary and backup files
-*.bak
-*.bak*
-*.clean
-create-clean-json.js
-clean-package-lock.js
--files --others --exclude-standard
-structure.txt
-vercel-build.sh
-check-setup.js
-index.js
-next.config.ts 
+.venv
