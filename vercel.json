@@ -1,3 +1,12 @@
 {
-	"framework": "nextjs"
+	"framework": "nextjs",
+	"buildCommand": "next build",
+	"devCommand": "next dev",
+	"outputDirectory": ".next",
+	"cleanUrls": true,
+	"functions": {
+		"api/python/**/*.py": {
+			"runtime": "python3.9"
+		}
+	}
 }
