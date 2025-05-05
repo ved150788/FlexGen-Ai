@@ -1,8 +1,9 @@
 # Ignore git related files
 .git/
 .gitignore
+.gitmodules
 
-# Ignore submodules and duplicated project folders
+# Ignore submodules and duplicated project folders - these are causing problems
 FlexGen-Ai/
 FlexGen-Ai-1/
 strapi-backend/
@@ -34,4 +35,6 @@ postcss.config.js
 tailwind.config.js
 tsconfig.json
 next-env.d.ts
-README.md 
+README.md
+vercel-build.sh
+next.config.js 
