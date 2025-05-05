@@ -35,21 +35,28 @@ type BlogPost = {
 	title: string;
 	excerpt: string;
 	categories: string[];
+	// Add missing properties used in the component
+	coverImage?: string;
+	readingTime?: string;
+	authorRole?: string;
+	authorBio?: string;
 };
 
-// Update the Props type to match Next.js 15 requirements
+// Updated Props type for Next.js 15
+type PageParams = Promise<{ slug: string }>;
+type PageSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 interface Props {
-	params: {
-		slug: string;
-	};
-	searchParams: Record<string, string | string[] | undefined>;
+	params: PageParams;
+	searchParams?: PageSearchParams;
 }
 
 export async function generateMetadata(
 	{ params, searchParams }: Props,
 	parent: ResolvingMetadata
 ): Promise<Metadata> {
-	const { slug } = params;
+	// Need to await params to access the slug
+	const { slug } = await params;
 	const post = getPostContent(slug);
 
 	if (!post) {
@@ -85,9 +92,10 @@ export async function generateMetadata(
 	};
 }
 
-// Use the updated Props interface
-export default function BlogPostPage({ params }: Props) {
-	const { slug } = params;
+// Updated with async/await for Next.js 15
+export default async function BlogPostPage({ params }: Props) {
+	// Need to await params to access the slug
+	const { slug } = await params;
 	const post = getPostContent(slug);
 	const posts = getPostMetadata();
 
@@ -252,7 +260,7 @@ export default function BlogPostPage({ params }: Props) {
 											<Link
 												key={category}
 												href={`/blog/category/${category}`}
-												className="px-4 py-2 bg-white hover:bg-gray-200 text-gray-700 border border-gray-200 rounded-full text-sm font-medium transition duration-200"
+												className="px-4 py-2 bg-white text-gray-700 rounded-full text-sm font-medium hover:bg-blue-500 hover:text-white transition-all duration-300 shadow-sm"
 											>
 												{category}
 											</Link>
@@ -261,10 +269,84 @@ export default function BlogPostPage({ params }: Props) {
 								</div>
 							)}
 
-						{/* Author Bio */}
-						<div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 mb-10">
-							<div className="flex items-center">
-								<div className="w-16 h-16 rounded-full overflow-hidden mr-4 border-2 border-blue-100">
+						{/* Post Navigation */}
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+							{prevPost && (
+								<Link
+									href={`/blog/${prevPost.slug}`}
+									className="group flex flex-col p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border-l-4 border-blue-500"
+								>
+									<span className="flex items-center text-blue-500 text-sm font-medium mb-2">
+										<FaChevronLeft className="mr-2 text-xs group-hover:animate-pulse" />
+										Previous Post
+									</span>
+									<h4 className="text-lg font-semibold text-gray-800 line-clamp-2 group-hover:text-blue-600 transition-colors">
+										{prevPost.title}
+									</h4>
+								</Link>
+							)}
+
+							{nextPost && (
+								<Link
+									href={`/blog/${nextPost.slug}`}
+									className="group flex flex-col p-6 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border-r-4 border-blue-500 md:text-right"
+								>
+									<span className="flex items-center justify-end text-blue-500 text-sm font-medium mb-2">
+										Next Post
+										<FaChevronRight className="ml-2 text-xs group-hover:animate-pulse" />
+									</span>
+									<h4 className="text-lg font-semibold text-gray-800 line-clamp-2 group-hover:text-blue-600 transition-colors">
+										{nextPost.title}
+									</h4>
+								</Link>
+							)}
+						</div>
+
+						{/* Related Posts */}
+						{relatedPosts.length > 0 && (
+							<div className="mb-16">
+								<h3 className="text-2xl font-bold mb-8 text-gray-900">
+									Related Articles
+								</h3>
+								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+									{relatedPosts.map((relatedPost: BlogPost) => (
+										<Link
+											key={relatedPost.slug}
+											href={`/blog/${relatedPost.slug}`}
+											className="group block bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
+										>
+											<div className="aspect-w-16 aspect-h-9 relative h-48">
+												<Image
+													src={
+														relatedPost.coverImage ||
+														"/images/blog/default-thumbnail.jpg"
+													}
+													alt={relatedPost.title}
+													fill
+													className="object-cover group-hover:scale-105 transition-transform duration-500"
+												/>
+											</div>
+											<div className="p-5">
+												<h4 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+													{relatedPost.title}
+												</h4>
+												<p className="text-sm text-gray-600 line-clamp-3">
+													{relatedPost.excerpt}
+												</p>
+											</div>
+										</Link>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+
+					{/* Sidebar */}
+					<div className="lg:w-1/3 space-y-8">
+						{/* Author Info */}
+						<div className="bg-white rounded-2xl shadow-md p-6">
+							<div className="flex items-center mb-4">
+								<div className="w-16 h-16 rounded-full overflow-hidden mr-4">
 									<Image
 										src={
 											post.metadata.authorImage ||
@@ -274,220 +356,94 @@ export default function BlogPostPage({ params }: Props) {
 										width={64}
 										height={64}
 										className="object-cover w-full h-full"
-										unoptimized
 									/>
 								</div>
 								<div>
-									<h3 className="font-bold text-lg">{post.metadata.author}</h3>
+									<h3 className="text-lg font-semibold text-gray-900">
+										{post.metadata.author}
+									</h3>
 									<p className="text-sm text-gray-600">
-										{post.metadata.authorTitle || "AI Expert"}
+										{post.metadata.authorTitle || "Content Writer"}
 									</p>
 								</div>
 							</div>
-							<p className="mt-4 text-gray-700">
-								Expert in artificial intelligence and machine learning with
-								years of industry experience.
+							<p className="text-gray-700 text-sm">
+								{
+									"Expert content creator with a passion for cybersecurity and AI technologies."
+								}
 							</p>
 						</div>
 
-						{/* Navigation */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-							{prevPost && (
-								<Link
-									href={`/blog/${prevPost.slug}`}
-									className="group p-6 bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg hover:border-blue-100 transition duration-300 flex items-center"
-								>
-									<div className="mr-4 text-blue-500 group-hover:text-blue-600">
-										<FaChevronLeft size={20} />
-									</div>
-									<div>
-										<p className="text-sm text-gray-500 mb-1">
-											Previous Article
-										</p>
-										<h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-											{prevPost.title}
-										</h3>
-									</div>
-								</Link>
-							)}
-							{nextPost && (
-								<Link
-									href={`/blog/${nextPost.slug}`}
-									className="group p-6 bg-white rounded-xl shadow-md border border-gray-100 hover:shadow-lg hover:border-blue-100 transition duration-300 flex items-center justify-end text-right"
-								>
-									<div>
-										<p className="text-sm text-gray-500 mb-1">Next Article</p>
-										<h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-											{nextPost.title}
-										</h3>
-									</div>
-									<div className="ml-4 text-blue-500 group-hover:text-blue-600">
-										<FaChevronRight size={20} />
-									</div>
-								</Link>
-							)}
-						</div>
-
-						{/* Related Posts */}
-						<div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl shadow-lg p-8 mb-8">
-							<h3 className="text-xl font-bold mb-6">Related Articles</h3>
-							<div className="space-y-6">
-								{relatedPosts.length > 0 ? (
-									relatedPosts.map((related: BlogPost) => (
-										<div
-											key={related.slug}
-											className="group bg-white p-5 rounded-xl shadow-sm hover:shadow-md transition duration-300"
-										>
-											<Link href={`/blog/${related.slug}`} className="block">
-												<h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
-													{related.title}
-												</h4>
-												<p className="text-sm text-gray-500 line-clamp-2">
-													{related.excerpt}
-												</p>
-												<span className="text-xs text-blue-600 mt-3 inline-block font-medium">
-													Read more →
-												</span>
-											</Link>
-										</div>
-									))
-								) : (
-									<p className="text-gray-500 bg-white p-6 rounded-xl text-center">
-										No related posts found.
-									</p>
-								)}
-							</div>
-						</div>
-
-						{/* Comments Section */}
-						<div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
-							<h3 className="text-2xl font-bold mb-6 text-gray-900">
-								Discussion
-							</h3>
-							<div className="space-y-6">
-								<div className="border-b pb-6 mb-6">
-									<h4 className="text-lg font-semibold mb-4">
-										Leave a comment
-									</h4>
-									<form className="space-y-4">
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											<input
-												type="text"
-												placeholder="Name"
-												className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-											/>
-											<input
-												type="email"
-												placeholder="Email"
-												className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-											/>
-										</div>
-										<textarea
-											placeholder="Your comment"
-											rows={4}
-											className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										></textarea>
-										<button className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
-											Post Comment
-										</button>
-									</form>
-								</div>
-								<p className="text-gray-500 text-center italic">
-									Be the first to comment on this article!
-								</p>
-							</div>
-						</div>
-					</div>
-
-					{/* Sidebar */}
-					<div className="lg:w-1/3">
-						{/* Author Card */}
-						<div className="bg-white rounded-2xl shadow-lg p-8 mb-8 sticky top-24">
-							<div className="flex flex-col items-center text-center mb-6">
-								<div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-4 border-blue-100 shadow-md">
-									<Image
-										src={
-											post.metadata.authorImage ||
-											"/images/team/default-avatar.jpg"
-										}
-										alt={post.metadata.author}
-										width={96}
-										height={96}
-										className="object-cover w-full h-full"
-										unoptimized
-									/>
-								</div>
-								<h3 className="text-xl font-bold text-gray-900">
-									{post.metadata.author}
-								</h3>
-								<p className="text-blue-600 text-sm font-medium mt-1">
-									{post.metadata.authorTitle || "AI Expert"}
-								</p>
-							</div>
-
-							<div className="border-t border-gray-100 pt-6 mb-6">
-								<h4 className="font-semibold text-lg mb-4 text-gray-900">
-									Get in Touch
-								</h4>
-								<form className="space-y-4">
-									<input
-										type="text"
-										placeholder="Name"
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-									<input
-										type="email"
-										placeholder="Email"
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-									<textarea
-										placeholder="Message"
-										rows={3}
-										className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									></textarea>
-									<button className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
-										Send Message
-									</button>
-								</form>
-							</div>
-
-							<div className="border-t border-gray-100 pt-6">
-								<h4 className="font-semibold text-lg mb-4 text-gray-900">
-									Request a Demo
-								</h4>
-								<Link
-									href="/contact"
-									className="block w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-center rounded-lg hover:from-blue-700 hover:to-indigo-700 transition duration-300 shadow-md hover:shadow-lg"
-								>
-									Schedule Now
-								</Link>
-							</div>
-						</div>
-
 						{/* Newsletter Signup */}
-						<div className="bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-2xl shadow-lg p-8">
-							<h3 className="text-xl font-bold mb-4">Stay Updated</h3>
-							<p className="mb-6 text-white/90">
-								Subscribe to our newsletter for the latest insights on AI and
-								technology.
+						<div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
+							<h3 className="text-xl font-bold mb-3">Stay Updated</h3>
+							<p className="text-blue-100 mb-4">
+								Get the latest cybersecurity insights and AI news delivered to
+								your inbox.
 							</p>
 							<form className="space-y-3">
 								<input
 									type="email"
 									placeholder="Your email address"
-									className="w-full px-4 py-3 rounded-lg text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+									className="w-full px-4 py-3 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white/50"
 								/>
-								<button className="w-full py-3 bg-white text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition duration-300">
+								<button
+									type="submit"
+									className="w-full bg-white text-blue-600 font-medium py-3 rounded-lg hover:bg-blue-50 transition-colors"
+								>
 									Subscribe
 								</button>
 							</form>
+							<p className="text-xs text-blue-200 mt-3">
+								We respect your privacy. Unsubscribe at any time.
+							</p>
 						</div>
+
+						{/* Popular Posts */}
+						<div className="bg-white rounded-2xl shadow-md p-6">
+							<h3 className="text-xl font-bold mb-6 text-gray-900">
+								Popular Posts
+							</h3>
+							<div className="space-y-4">
+								{posts
+									.slice(0, 4)
+									.filter((p: BlogPost) => p.slug !== slug)
+									.map((popularPost: BlogPost) => (
+										<Link
+											key={popularPost.slug}
+											href={`/blog/${popularPost.slug}`}
+											className="group flex items-start pb-4 border-b border-gray-100 last:border-0 last:pb-0"
+										>
+											<div className="w-20 h-20 rounded-md overflow-hidden flex-shrink-0 mr-4">
+												<Image
+													src={
+														popularPost.coverImage ||
+														"/images/blog/default-thumbnail.jpg"
+													}
+													alt={popularPost.title}
+													width={80}
+													height={80}
+													className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
+												/>
+											</div>
+											<div>
+												<h4 className="text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-blue-600 transition-colors">
+													{popularPost.title}
+												</h4>
+												<span className="text-xs text-gray-500 mt-1 block">
+													{popularPost.readingTime || "5"} min read
+												</span>
+											</div>
+										</Link>
+									))}
+							</div>
+						</div>
+
+						{/* CTA Section */}
+						<CtaSection />
 					</div>
 				</div>
 			</div>
-
-			{/* CTA Section */}
-			<CtaSection />
 		</main>
 	);
 }

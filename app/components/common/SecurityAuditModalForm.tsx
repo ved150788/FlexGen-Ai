@@ -144,7 +144,7 @@ export default function SecurityAuditModalForm({
 
 		try {
 			// Call the Vercel API endpoint instead of local Flask server
-			const response = await fetch("/api/security-audit", {
+			const response = await fetch("/api/python/security-audit", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

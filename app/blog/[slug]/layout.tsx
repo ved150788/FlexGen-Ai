@@ -1,16 +1,16 @@
 import { blogs } from "../../data/blogs";
-import { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
+
+type BlogParams = Promise<{ slug: string }>;
 
 // Generate metadata for each blog post page
-export async function generateMetadata({
-	params,
-}: {
-	params: { slug: string };
-}): Promise<Metadata> {
-	// No need to await the params
-	const { slug } = params;
+export async function generateMetadata(
+	{ params }: { params: BlogParams },
+	parent: ResolvingMetadata
+): Promise<Metadata> {
+	// Need to await params to access the slug
+	const { slug } = await params;
 
-	// Find the post with the matching slug
 	const post = blogs.find((b) => b.slug === slug);
 
 	if (!post) {
@@ -19,6 +19,9 @@ export async function generateMetadata({
 			description: "The requested blog post could not be found.",
 		};
 	}
+
+	// Get data from parent
+	const previousImages = (await parent).openGraph?.images || [];
 
 	return {
 		title: `${post.title} | FlexGen.ai Blog`,
@@ -35,6 +38,7 @@ export async function generateMetadata({
 					height: 630,
 					alt: post.title,
 				},
+				...previousImages,
 			],
 			locale: "en_US",
 			type: "article",
@@ -54,14 +58,12 @@ export async function generateMetadata({
 }
 
 // Generate static paths for all blog posts
-export function generateStaticParams() {
-	return blogs.map((post) => ({ slug: post.slug }));
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+	return blogs.map((post) => ({
+		slug: post.slug,
+	}));
 }
 
-export default function BlogPostLayout({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
-	return children;
+export default function Layout({ children }: { children: React.ReactNode }) {
+	return <>{children}</>;
 }

@@ -1,31 +1,38 @@
 import { services, Service } from "../../data/services";
 import { notFound } from "next/navigation";
-import { Metadata } from "next";
+import { Metadata, ResolvingMetadata } from "next";
 import Script from "next/script";
 import { siteUrl, siteName } from "../../seo-config";
 import Image from "next/image";
 import Link from "next/link";
 
+// Updated Props type for Next.js 15
+type PageParams = Promise<{ slug: string }>;
+type PageSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 interface Props {
-	params: { slug: string };
-	searchParams: Record<string, string | string[] | undefined>;
+	params: PageParams;
+	searchParams?: PageSearchParams;
 }
 
-export async function generateStaticParams() {
+export function generateStaticParams(): { slug: string }[] {
 	return services.map((service) => ({
 		slug: service.slug,
 	}));
 }
 
-export async function generateMetadata({
-	params,
-	searchParams,
-}: Props): Promise<Metadata> {
-	// No need to await params
-	const { slug } = params;
+export async function generateMetadata(
+	{ params, searchParams }: Props,
+	parent: ResolvingMetadata
+): Promise<Metadata> {
+	// Need to await params to access the slug
+	const { slug } = await params;
 
 	const service = services.find((s) => s.slug === slug);
 	if (!service) return {};
+
+	// Optionally, you can use the parent metadata
+	const previousImages = (await parent).openGraph?.images || [];
 
 	const pageUrl = `${siteUrl}/services/${slug}`;
 	const imageUrl = `${siteUrl}/images/services/${slug}.jpg`;
@@ -54,6 +61,7 @@ export async function generateMetadata({
 					height: 630,
 					alt: service.title,
 				},
+				...previousImages,
 			],
 			locale: "en_US",
 			type: "website",
@@ -69,9 +77,10 @@ export async function generateMetadata({
 	};
 }
 
-export default function ServiceDetail({ params }: Props) {
-	// No need to await params
-	const { slug } = params;
+// Updated to async function with awaited params
+export default async function ServiceDetail({ params }: Props) {
+	// Need to await params to access the slug
+	const { slug } = await params;
 
 	const service = services.find((s) => s.slug === slug);
 	if (!service) return notFound();
@@ -244,18 +253,35 @@ export default function ServiceDetail({ params }: Props) {
 						</div>
 
 						{/* Icon display with glass morphism effect */}
-						<div className="hidden md:flex justify-center">
-							<div className="relative">
-								<div className="absolute inset-0 bg-gradient-to-r from-primarySaffron/20 to-blue-500/20 rounded-full blur-3xl opacity-70 animate-pulse"></div>
-								<div className="relative bg-white/10 backdrop-blur-lg w-72 h-72 rounded-full flex items-center justify-center p-10 border border-white/10 shadow-2xl">
-									<Image
-										src={service.icon}
-										alt={service.title}
-										width={150}
-										height={150}
-										className="w-full h-full object-contain drop-shadow-2xl"
-									/>
+						<div className="flex justify-center">
+							<div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl border border-white/20 shadow-xl relative overflow-hidden w-full max-w-md aspect-square flex items-center justify-center">
+								{/* Service icon */}
+								<div className="relative z-10 text-primarySaffron">
+									{service.icon ? (
+										<div
+											className="w-32 h-32 md:w-40 md:h-40 mx-auto"
+											dangerouslySetInnerHTML={{ __html: service.icon }}
+										/>
+									) : (
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											className="w-32 h-32 md:w-40 md:h-40 mx-auto"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+											/>
+										</svg>
+									)}
 								</div>
+								{/* Decorative elements */}
+								<div className="absolute -bottom-10 -right-10 w-40 h-40 bg-primarySaffron/20 rounded-full blur-2xl"></div>
+								<div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-500/20 rounded-full blur-2xl"></div>
 							</div>
 						</div>
 					</div>
