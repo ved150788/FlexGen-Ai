@@ -38,14 +38,14 @@ type BlogPost = {
 };
 
 type Props = {
-	params: Promise<any>;
+	params: { slug: string };
 };
 
 export async function generateMetadata(
 	{ params }: Props,
 	parent: ResolvingMetadata
 ): Promise<Metadata> {
-	const { slug } = await params;
+	const { slug } = params;
 	const post = getPostContent(slug);
 
 	if (!post) {
@@ -82,7 +82,7 @@ export async function generateMetadata(
 }
 
 export default async function BlogPostPage({ params }: Props) {
-	const { slug } = await params;
+	const { slug } = params;
 	const post = getPostContent(slug);
 	const posts = getPostMetadata();
 

@@ -1,5 +1,1 @@
-# Empty .gitmodules file to resolve the submodule warning 
-
-[submodule "FlexGen-Ai"]
-	path = FlexGen-Ai
-	url = https://github.com/ved150788/FlexGen-Ai.git 
+# This file is intentionally empty. 

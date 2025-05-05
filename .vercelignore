@@ -1,6 +1,5 @@
 # Ignore git related files
 .git/
-.gitmodules
 .gitignore
 
 # Ignore submodules and duplicated project folders
@@ -10,7 +9,6 @@ strapi-backend/
 flask-email-backend/
 tools/
 .venv/
-node_modules/
 
 # Ignore temporary and backup files
 *.bak

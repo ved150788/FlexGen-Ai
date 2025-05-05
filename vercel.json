@@ -1,16 +1,19 @@
 {
 	"version": 2,
-	"buildCommand": "npm run build",
-	"outputDirectory": ".next",
-	"installCommand": "npm install",
+	"buildCommand": "npm run vercel-build",
 	"builds": [
-		{ "src": "api/*.py", "use": "@vercel/python" },
-		{ "src": "package.json", "use": "@vercel/next" }
+		{
+			"src": "package.json",
+			"use": "@vercel/next"
+		},
+		{
+			"src": "api/*.py",
+			"use": "@vercel/python"
+		}
 	],
 	"routes": [
 		{ "src": "/api/contact", "dest": "/api/contact.py" },
 		{ "src": "/api/security-audit", "dest": "/api/security-audit.py" },
-		{ "handle": "filesystem" },
 		{ "src": "/(.*)", "dest": "/" }
 	]
 }
