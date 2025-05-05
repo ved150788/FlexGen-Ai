@@ -1,15 +1,16 @@
 # Ignore git related files
-.git/
+.git
 .gitignore
 .gitmodules
 
-# Ignore submodules and duplicated project folders - these are causing problems
+# Ignore submodules and duplicated project folders
 FlexGen-Ai/
 FlexGen-Ai-1/
 strapi-backend/
 flask-email-backend/
 tools/
 .venv/
+node_modules/
 
 # Ignore temporary and backup files
 *.bak
@@ -19,22 +20,7 @@ create-clean-json.js
 clean-package-lock.js
 -files --others --exclude-standard
 structure.txt
-
-# Keep only essential files
-# This ensures only the main project is deployed
-package.json
-package-lock.json
-vercel.json
-api/
-app/
-lib/
-public/
-data/
-next.config.ts
-postcss.config.js
-tailwind.config.js
-tsconfig.json
-next-env.d.ts
-README.md
 vercel-build.sh
-next.config.js 
+check-setup.js
+index.js
+next.config.ts 
