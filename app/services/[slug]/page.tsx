@@ -8,6 +8,7 @@ import Link from "next/link";
 
 interface Props {
 	params: { slug: string };
+	searchParams: Record<string, string | string[] | undefined>;
 }
 
 export async function generateStaticParams() {
@@ -16,7 +17,10 @@ export async function generateStaticParams() {
 	}));
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({
+	params,
+	searchParams,
+}: Props): Promise<Metadata> {
 	// No need to await params
 	const { slug } = params;
 
@@ -65,7 +69,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	};
 }
 
-export default async function ServiceDetail({ params }: Props) {
+export default function ServiceDetail({ params }: Props) {
 	// No need to await params
 	const { slug } = params;
 

@@ -37,12 +37,16 @@ type BlogPost = {
 	categories: string[];
 };
 
-type Props = {
-	params: { slug: string };
-};
+// Update the Props type to match Next.js 15 requirements
+interface Props {
+	params: {
+		slug: string;
+	};
+	searchParams: Record<string, string | string[] | undefined>;
+}
 
 export async function generateMetadata(
-	{ params }: Props,
+	{ params, searchParams }: Props,
 	parent: ResolvingMetadata
 ): Promise<Metadata> {
 	const { slug } = params;
@@ -81,7 +85,8 @@ export async function generateMetadata(
 	};
 }
 
-export default async function BlogPostPage({ params }: Props) {
+// Use the updated Props interface
+export default function BlogPostPage({ params }: Props) {
 	const { slug } = params;
 	const post = getPostContent(slug);
 	const posts = getPostMetadata();
