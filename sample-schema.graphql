@@ -1,0 +1,183 @@
+"""
+E-Commerce GraphQL API Schema
+This is a sample schema for testing the API Fuzzer tool
+"""
+scalar DateTime
+scalar Email
+scalar URL
+
+enum OrderStatus {
+	PENDING
+	PROCESSING
+	SHIPPED
+	DELIVERED
+	CANCELLED
+}
+
+enum UserRole {
+	USER
+	ADMIN
+}
+
+type User {
+	id: ID!
+	email: Email!
+	firstName: String
+	lastName: String
+	role: UserRole!
+	orders: [Order!]
+	createdAt: DateTime!
+}
+
+type Product {
+	id: ID!
+	name: String!
+	description: String
+	price: Float!
+	category: String
+	inStock: Boolean!
+	imageUrl: URL
+	reviews: [Review!]
+	createdAt: DateTime!
+	updatedAt: DateTime!
+}
+
+type Review {
+	id: ID!
+	rating: Int!
+	comment: String
+	user: User!
+	product: Product!
+	createdAt: DateTime!
+}
+
+type OrderItem {
+	id: ID!
+	product: Product!
+	quantity: Int!
+	price: Float!
+}
+
+type Address {
+	street: String!
+	city: String!
+	state: String
+	zipCode: String!
+	country: String!
+}
+
+type Order {
+	id: ID!
+	user: User!
+	items: [OrderItem!]!
+	totalAmount: Float!
+	status: OrderStatus!
+	shippingAddress: Address!
+	paymentMethod: String!
+	createdAt: DateTime!
+	updatedAt: DateTime!
+}
+
+type AuthPayload {
+	token: String!
+	user: User!
+}
+
+input ProductFilterInput {
+	category: String
+	minPrice: Float
+	maxPrice: Float
+	inStock: Boolean
+}
+
+input ProductInput {
+	name: String!
+	description: String
+	price: Float!
+	category: String
+	inStock: Boolean!
+	imageUrl: URL
+}
+
+input OrderItemInput {
+	productId: ID!
+	quantity: Int!
+}
+
+input AddressInput {
+	street: String!
+	city: String!
+	state: String
+	zipCode: String!
+	country: String!
+}
+
+input OrderInput {
+	items: [OrderItemInput!]!
+	shippingAddress: AddressInput!
+	paymentMethod: String!
+}
+
+input ReviewInput {
+	productId: ID!
+	rating: Int!
+	comment: String
+}
+
+input LoginInput {
+	email: Email!
+	password: String!
+}
+
+input SignupInput {
+	email: Email!
+	password: String!
+	firstName: String!
+	lastName: String!
+}
+
+type Query {
+	# User queries
+	me: User
+	user(id: ID!): User
+	users: [User!]!
+
+	# Product queries
+	product(id: ID!): Product
+	products(filter: ProductFilterInput, limit: Int, offset: Int): [Product!]!
+	searchProducts(query: String!): [Product!]!
+
+	# Order queries
+	order(id: ID!): Order
+	orders(status: OrderStatus): [Order!]!
+
+	# Review queries
+	review(id: ID!): Review
+	productReviews(productId: ID!): [Review!]!
+}
+
+type Mutation {
+	# Auth mutations
+	login(input: LoginInput!): AuthPayload!
+	signup(input: SignupInput!): AuthPayload!
+
+	# Product mutations
+	createProduct(input: ProductInput!): Product!
+	updateProduct(id: ID!, input: ProductInput!): Product!
+	deleteProduct(id: ID!): Boolean!
+
+	# Order mutations
+	createOrder(input: OrderInput!): Order!
+	updateOrderStatus(id: ID!, status: OrderStatus!): Order!
+	cancelOrder(id: ID!): Order!
+
+	# Review mutations
+	createReview(input: ReviewInput!): Review!
+	updateReview(id: ID!, input: ReviewInput!): Review!
+	deleteReview(id: ID!): Boolean!
+}
+
+type Subscription {
+	orderStatusChanged(orderId: ID!): Order!
+	newReview(productId: ID): Review!
+}

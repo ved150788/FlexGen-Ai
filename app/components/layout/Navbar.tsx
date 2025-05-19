@@ -22,7 +22,7 @@ const toolsCategories = [
 		tools: [
 			{
 				name: "Vulnerability Scanner",
-				href: "/tools/coming-soon?tool=Vulnerability Scanner",
+				href: "/tools/vulnerability-scanner",
 			},
 			{
 				name: "Password Manager",
@@ -30,7 +30,7 @@ const toolsCategories = [
 			},
 			{
 				name: "Threat Intelligence",
-				href: "/tools/coming-soon?tool=Threat Intelligence",
+				href: "/tools/threat-intelligence",
 			},
 			{
 				name: "Security Dashboard",
@@ -68,7 +68,7 @@ const toolsCategories = [
 		tools: [
 			{
 				name: "Web App Pentester Pro",
-				href: "/tools/coming-soon?tool=Flexgen Web App Pentester Pro",
+				href: "/tools/web-app-pentester-pro",
 			},
 			{
 				name: "AI-Powered API Fuzzer",

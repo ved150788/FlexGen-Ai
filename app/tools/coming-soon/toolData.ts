@@ -1,15 +1,5 @@
 // Tool descriptions
 export const toolInfo = {
-	"Vulnerability Scanner": {
-		description:
-			"Our comprehensive scanner identifies security vulnerabilities across your entire digital infrastructure including web applications, networks, and servers.",
-		features: [
-			"Continuous scanning",
-			"Detailed reporting",
-			"Risk prioritization",
-			"Integration with CI/CD pipelines",
-		],
-	},
 	"Password Manager": {
 		description:
 			"Secure password management solution for teams and enterprises with advanced encryption and access controls.",
@@ -18,16 +8,6 @@ export const toolInfo = {
 			"Breach monitoring",
 			"SSO integration",
 			"Secure sharing",
-		],
-	},
-	"Threat Intelligence": {
-		description:
-			"Real-time threat intelligence platform that collects, analyzes and distributes actionable intelligence about emerging threats.",
-		features: [
-			"Global threat database",
-			"Customized alerts",
-			"Attribution analysis",
-			"Integration with SIEM systems",
 		],
 	},
 	"Security Dashboard": {

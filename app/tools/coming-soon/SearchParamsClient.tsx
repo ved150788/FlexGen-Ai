@@ -190,14 +190,6 @@ export default function SearchParamsClient() {
 						<ul className="space-y-2">
 							<li>
 								<Link
-									href="/tools/coming-soon?tool=Vulnerability Scanner"
-									className="text-blue-600 hover:underline"
-								>
-									Vulnerability Scanner
-								</Link>
-							</li>
-							<li>
-								<Link
 									href="/tools/coming-soon?tool=Network Monitor"
 									className="text-blue-600 hover:underline"
 								>
@@ -206,10 +198,18 @@ export default function SearchParamsClient() {
 							</li>
 							<li>
 								<Link
-									href="/tools/coming-soon?tool=AI Recon Bot"
+									href="/tools/coming-soon?tool=Security Dashboard"
 									className="text-blue-600 hover:underline"
 								>
-									AI Recon Bot
+									Security Dashboard
+								</Link>
+							</li>
+							<li>
+								<Link
+									href="/tools/coming-soon?tool=AI Misconfiguration Checker"
+									className="text-blue-600 hover:underline"
+								>
+									AI Misconfiguration Checker
 								</Link>
 							</li>
 							<li>

@@ -22,8 +22,9 @@ const tools = [
 		description:
 			"Comprehensive scanner for identifying security vulnerabilities across your infrastructure",
 		category: "Scanning & Assessment",
-		status: "coming-soon",
+		status: "available",
 		icon: "🔍",
+		beta: true,
 	},
 	{
 		id: "password-manager",
@@ -40,8 +41,9 @@ const tools = [
 		description:
 			"Real-time intelligence platform for emerging security threats",
 		category: "Intelligence",
-		status: "coming-soon",
+		status: "available",
 		icon: "🛡️",
+		beta: true,
 	},
 	{
 		id: "security-dashboard",
