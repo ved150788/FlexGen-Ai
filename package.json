@@ -3,10 +3,11 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev",
+		"dev": "app\\tools\\threat_intel_platform\\start_backend_and_frontend.bat",
 		"build": "next build",
 		"start": "next start",
-		"lint": "next lint"
+		"lint": "next lint",
+		"threat-intel": "python app/tools/threat_intel_platform/app.py"
 	},
 	"dependencies": {
 		"@headlessui/react": "^2.2.2",

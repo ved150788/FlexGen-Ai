@@ -24,6 +24,7 @@ import "@/app/styles/blog-content.css";
 // Import components
 import Breadcrumbs from "@/app/components/common/Breadcrumbs";
 import CtaSection from "@/app/components/common/CtaSection";
+import CommentSection from "@/app/components/blog/CommentSection";
 
 // Get blog content functions
 import { getPostMetadata, getPostContent } from "@/lib/blog";
@@ -42,17 +43,16 @@ type BlogPost = {
 	authorBio?: string;
 };
 
-// Updated Props type for Next.js 15
-type PageParams = Promise<{ slug: string }>;
-type PageSearchParams = Promise<Record<string, string | string[] | undefined>>;
+type Params = Promise<{ slug: string }>;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 interface Props {
-	params: PageParams;
-	searchParams?: PageSearchParams;
+	params: Params;
+	searchParams?: SearchParams;
 }
 
 export async function generateMetadata(
-	{ params, searchParams }: Props,
+	{ params }: Props,
 	parent: ResolvingMetadata
 ): Promise<Metadata> {
 	// Need to await params to access the slug
@@ -127,13 +127,13 @@ export default async function BlogPostPage({ params }: Props) {
 		<main className="blog-post-page min-h-screen bg-gradient-to-b from-gray-50 to-white">
 			{/* Hero Section with Enhanced Parallax Effect */}
 			<div className="relative h-[60vh] min-h-[500px] overflow-hidden">
-				<div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 to-indigo-900/90 z-10"></div>
+				<div className="absolute inset-0 bg-gray-800 z-10"></div>
 				<div className="absolute inset-0 z-0">
 					<Image
 						src={post.metadata.coverImage || "/images/blog/default-cover.jpg"}
 						alt={post.metadata.title}
 						fill
-						className="object-cover brightness-50"
+						className="object-cover"
 						priority
 					/>
 				</div>
@@ -339,6 +339,9 @@ export default async function BlogPostPage({ params }: Props) {
 								</div>
 							</div>
 						)}
+
+						{/* Comment Section */}
+						<CommentSection postSlug={slug} />
 					</div>
 
 					{/* Sidebar */}

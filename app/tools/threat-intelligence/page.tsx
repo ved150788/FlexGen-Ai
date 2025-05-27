@@ -1,25 +1,24 @@
-// Updated Threat Intelligence Tool page - May 2025
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import {
+	useState,
+	useEffect,
+	ReactNode,
+	MouseEvent,
+	ChangeEvent,
+	KeyboardEvent,
+} from "react";
 import {
 	Chart as ChartJS,
 	ArcElement,
+	Tooltip,
+	Legend,
 	CategoryScale,
 	LinearScale,
 	BarElement,
 	Title,
-	Tooltip,
-	Legend,
-	RadialLinearScale,
-	PointElement,
-	LineElement,
 } from "chart.js";
-import { Doughnut, Bar, Radar, Line } from "react-chartjs-2";
-import Link from "next/link";
-import { aggregateIntelligence, fetchIndicators } from "./api";
-import { fetchTaxiiIntelligence } from "./stix-connector";
-import config from "./config";
+import { Pie, Bar } from "react-chartjs-2";
 
 // Register ChartJS components
 ChartJS.register(
@@ -29,1506 +28,1345 @@ ChartJS.register(
 	CategoryScale,
 	LinearScale,
 	BarElement,
-	Title,
-	RadialLinearScale,
-	PointElement,
-	LineElement
+	Title
 );
 
-// Define types for threat intelligence data
-interface ThreatIndicator {
-	id: string;
-	type: string;
+// Define custom component props
+interface CardProps {
+	children: ReactNode;
+	className?: string;
+}
+
+interface ButtonProps {
+	children: ReactNode;
+	onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+	disabled?: boolean;
+	className?: string;
+}
+
+interface InputProps {
+	placeholder: string;
 	value: string;
-	confidence: number;
-	severity: "High" | "Medium" | "Low";
-	firstSeen: string;
-	lastSeen: string;
-	tags: string[];
-	relatedActors?: string[];
-	description?: string;
+	onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+	onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+	className?: string;
 }
 
-interface ThreatActor {
-	id: string;
+interface SelectProps {
+	value: string;
+	onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+	options: { value: string; label: string }[];
+	className?: string;
+}
+
+interface ChildrenProp {
+	children: ReactNode;
+	className?: string;
+}
+
+interface ClassNameProp extends ChildrenProp {
+	className?: string;
+}
+
+// Define the result type
+interface ThreatResult {
+	indicator: string;
+	type: string;
+	threatScore: number;
+	source: string;
+	firstSeen?: string;
+	lastSeen?: string;
+	tags?: string[];
+	sourceUrl?: string;
+	sampleText?: string;
+}
+
+interface DashboardStats {
+	totalThreats: number;
+	newThreats: number;
+	topDomains: { domain: string; count: number }[];
+	topIPs: { ip: string; count: number }[];
+	threatsByType: { type: string; count: number }[];
+	sourceDistribution?: { source: string; count: number }[];
+	mostActiveSource?: string;
+	highestRiskScore?: number;
+	isMockData?: boolean;
+}
+
+interface TaxiiSource {
 	name: string;
-	aliases: string[];
-	description: string;
-	motivation: string[];
-	ttps: string[];
-	targets: string[];
-	countryOfOrigin: string;
-	firstSeen: string;
-	lastActive: string;
-	associatedCampaigns: string[];
-	indicators?: ThreatIndicator[];
+	url: string;
+	collection: string;
+	iocCount: number;
 }
 
-interface Campaign {
-	id: string;
-	name: string;
-	description: string;
-	actors: string[];
-	targets: string[];
-	ttps: string[];
-	startDate: string;
-	endDate?: string;
-	status: "Active" | "Inactive" | "Unknown";
-	relatedCampaigns?: string[];
-	indicators?: ThreatIndicator[];
+interface TaxiiStatusData {
+	status: string;
+	taxiSources: TaxiiSource[];
+	recentRuns: {
+		timestamp: string;
+		status: string;
+		itemsAdded: number;
+		itemsUpdated: number;
+		error?: string;
+	}[];
 }
 
-interface IntelligenceReport {
-	id: string;
+// Update component definitions to accept className prop
+interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
+	className?: string;
+	children: React.ReactNode;
+}
+
+// Update Badge to support variant prop
+interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+	className?: string;
+	variant?: "default" | "outline";
+}
+
+// Update all component interfaces to support className prop
+interface CommonProps extends React.HTMLAttributes<HTMLDivElement> {
+	className?: string;
+	children: React.ReactNode;
+}
+
+interface TabProps extends CommonProps {
+	active?: boolean;
+	onClick?: () => void;
+}
+
+interface StatCardProps extends CommonProps {
 	title: string;
-	summary: string;
-	publishDate: string;
-	severity: "Critical" | "High" | "Medium" | "Low";
-	confidence: "High" | "Medium" | "Low";
-	affectedSectors: string[];
-	affectedRegions: string[];
-	indicators?: ThreatIndicator[];
-	relatedActors?: string[];
-	relatedCampaigns?: string[];
-	mitigations?: string[];
-	fullReport?: string;
+	value: number | string;
+	trend?: {
+		value: number;
+		label: string;
+		positive: boolean;
+	};
 }
 
-interface Dashboard {
-	recentIndicators: ThreatIndicator[];
-	activeCampaigns: Campaign[];
-	trendingThreats: {
-		category: string;
-		trend: number;
-		previousPeriod: number;
-		currentPeriod: number;
-	}[];
-	recentReports: IntelligenceReport[];
-	threatsByRegion: {
-		region: string;
-		count: number;
-	}[];
-	threatsBySector: {
-		sector: string;
-		count: number;
-	}[];
-}
+// Custom component implementations
+const Card = ({ children, className = "" }: CardProps) => (
+	<div className={`bg-white rounded-lg shadow-md overflow-hidden ${className}`}>
+		{children}
+	</div>
+);
 
-// Add a debug log viewer component
-interface LogMessage {
-	message: string;
-	timestamp: Date;
-}
+const CardHeader = ({ children }: ChildrenProp) => (
+	<div className="p-6 border-b">{children}</div>
+);
+const CardTitle = ({ children }: ChildrenProp) => (
+	<h2 className="text-xl font-semibold">{children}</h2>
+);
+const CardDescription = ({ children }: ChildrenProp) => (
+	<p className="text-gray-600 mt-1">{children}</p>
+);
+const CardContent = ({ children }: ChildrenProp) => (
+	<div className="p-6">{children}</div>
+);
+const CardFooter = ({ children, className = "" }: ClassNameProp) => (
+	<div className={`p-4 border-t ${className}`}>{children}</div>
+);
 
-export default function ThreatIntelligencePage() {
-	const [activeSection, setActiveSection] = useState<string>("dashboard");
-	const [loading, setLoading] = useState<boolean>(false);
-	const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-	const [searchTerm, setSearchTerm] = useState<string>("");
-	const [selectedIndicator, setSelectedIndicator] =
-		useState<ThreatIndicator | null>(null);
-	const [selectedReport, setSelectedReport] =
-		useState<IntelligenceReport | null>(null);
-	const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-	const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
-	const [logs, setLogs] = useState<LogMessage[]>([]);
-	const [showLogs, setShowLogs] = useState<boolean>(false);
-	const logRef = useRef<HTMLDivElement>(null);
+const Button = ({
+	children,
+	onClick,
+	disabled = false,
+	className = "",
+}: ButtonProps) => (
+	<button
+		onClick={onClick}
+		disabled={disabled}
+		className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 ${className}`}
+	>
+		{children}
+	</button>
+);
 
-	// Load dashboard data when component mounts
-	useEffect(() => {
-		// Force a clean start with real data
-		console.log(
-			"🚀 [DEBUG] Starting Threat Intelligence Platform with real-time data"
-		);
+const Input = ({
+	placeholder,
+	value,
+	onChange,
+	onKeyDown,
+	className = "",
+}: InputProps) => (
+	<input
+		type="text"
+		placeholder={placeholder}
+		value={value}
+		onChange={onChange}
+		onKeyDown={onKeyDown}
+		className={`px-4 py-2 border rounded-md w-full ${className}`}
+	/>
+);
 
-		// Listen for log messages
-		const handleLog = (event: any) => {
-			const logMessage = event.detail as LogMessage;
-			setLogs((prevLogs) => [...prevLogs, logMessage].slice(-100)); // Keep last 100 logs
+const Select = ({ value, onChange, options, className = "" }: SelectProps) => (
+	<select
+		value={value}
+		onChange={onChange}
+		className={`px-4 py-2 border rounded-md w-full ${className}`}
+	>
+		{options.map((option) => (
+			<option key={option.value} value={option.value}>
+				{option.label}
+			</option>
+		))}
+	</select>
+);
 
-			// Scroll to bottom of log viewer
-			if (logRef.current) {
-				logRef.current.scrollTop = logRef.current.scrollHeight;
-			}
-		};
+const Alert = ({ className, children, ...props }: AlertProps) => (
+	<div
+		className={`relative w-full rounded-lg border p-4 [&>svg]:absolute [&>svg]:text-foreground [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground ${className}`}
+		{...props}
+	>
+		{children}
+	</div>
+);
 
-		document.addEventListener("threatIntelLog", handleLog);
+const AlertTitle = ({ className, children, ...props }: AlertProps) => (
+	<h5
+		className={`mb-1 font-medium leading-none tracking-tight ${className}`}
+		{...props}
+	>
+		{children}
+	</h5>
+);
 
-		// Initial data load
-		loadDashboardData();
+const AlertDescription = ({ className, children, ...props }: AlertProps) => (
+	<div className={`text-sm [&_p]:leading-relaxed ${className}`} {...props}>
+		{children}
+	</div>
+);
 
-		// Set up auto-refresh if configured
-		if (config.autoRefreshInterval > 0) {
-			refreshIntervalRef.current = setInterval(() => {
-				console.log(
-					`⏰ [Dashboard] Auto-refreshing threat intelligence data...`
-				);
-				refreshData();
-			}, config.autoRefreshInterval);
-		}
+const Badge = ({ className, variant = "default", ...props }: BadgeProps) => {
+	const baseClass =
+		variant === "outline"
+			? "bg-transparent border border-gray-200 text-gray-800 dark:border-gray-700 dark:text-gray-300"
+			: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
 
-		// Clean up interval and event listener on unmount
-		return () => {
-			if (refreshIntervalRef.current) {
-				clearInterval(refreshIntervalRef.current);
-			}
-			document.removeEventListener("threatIntelLog", handleLog);
-		};
-	}, []);
+	return (
+		<div
+			className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${baseClass} ${className}`}
+			{...props}
+		/>
+	);
+};
 
-	// Function to refresh data on demand
-	const refreshData = async () => {
-		if (loading) {
-			console.log(
-				`⏳ [Dashboard] Refresh skipped - data is already being loaded`
-			);
-			return;
-		}
+const SuccessAlert = ({ className = "", children, ...props }: CommonProps) => (
+	<div
+		className={`p-4 border-l-4 border-green-500 bg-green-50 text-green-700 my-4 ${className}`}
+		{...props}
+	>
+		{children}
+	</div>
+);
 
-		console.log(
-			`🔄 [Dashboard] Manually refreshing threat intelligence data...`
-		);
-		console.log(
-			`⚠️ [DEBUG] Mock data is ${config.useMockData ? "ENABLED" : "DISABLED"}`
-		);
+const Tab = ({ active, onClick, className = "", children }: TabProps) => (
+	<button
+		onClick={onClick}
+		className={`px-4 py-2 font-medium text-sm border-b-2 ${
+			active
+				? "border-blue-500 text-blue-600"
+				: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+		} ${className}`}
+	>
+		{children}
+	</button>
+);
 
-		// Force config settings
-		if (config.useMockData) {
-			console.log(
-				`⚠️ [DEBUG] WARNING: Mock data is enabled - forcing to use real data`
-			);
-			(config as any).useMockData = false;
-			(config as any).useMockApiData = false;
-			(config as any).useMockTaxiiData = false;
-		}
+const Table = ({ children }: ChildrenProp) => (
+	<div className="overflow-x-auto">
+		<table className="min-w-full">{children}</table>
+	</div>
+);
 
-		await loadDashboardData();
-		setLastRefreshed(new Date());
+const TableHeader = ({ children }: ChildrenProp) => (
+	<thead className="bg-gray-50">{children}</thead>
+);
+const TableBody = ({ children }: ChildrenProp) => (
+	<tbody className="bg-white divide-y divide-gray-200">{children}</tbody>
+);
+const TableRow = ({
+	children,
+	onClick,
+}: ChildrenProp & { onClick?: () => void }) => (
+	<tr
+		onClick={onClick}
+		className={onClick ? "cursor-pointer hover:bg-gray-50" : ""}
+	>
+		{children}
+	</tr>
+);
+const TableHead = ({ children }: ChildrenProp) => (
+	<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+		{children}
+	</th>
+);
+const TableCell = ({ children }: ChildrenProp) => (
+	<td className="px-6 py-4 whitespace-nowrap text-sm">{children}</td>
+);
 
-		console.log(
-			`✅ [Dashboard] Refresh completed at ${new Date().toLocaleTimeString()}`
-		);
-	};
-
-	const loadDashboardData = async () => {
-		setLoading(true);
-
-		console.log(`🔄 [Dashboard] Loading dashboard data...`);
-		console.log(
-			`📊 [Dashboard] Config status: useMockData=${config.useMockData}, useMockApiData=${config.useMockApiData}, useMockTaxiiData=${config.useMockTaxiiData}`
-		);
-
-		try {
-			// Force settings to use real data
-			(config as any).useMockData = false;
-			(config as any).useMockApiData = false;
-			(config as any).useMockTaxiiData = false;
-
-			// Collect data from multiple sources
-			console.log(
-				`🔍 [Dashboard] Fetching threat intelligence from multiple sources...`
-			);
-
-			const [apiData, taxiiData] = await Promise.all([
-				aggregateIntelligence("recent threats").catch((e) => {
-					console.error(`❌ [Dashboard] Error fetching API intelligence:`, e);
-					return {
-						indicators: [],
-						sources: {},
-						timestamp: new Date().toISOString(),
-					};
-				}),
-				fetchTaxiiIntelligence().catch((e) => {
-					console.error(`❌ [Dashboard] Error fetching TAXII intelligence:`, e);
-					return [];
-				}),
-			]);
-
-			// Combine all indicators
-			const allIndicators = [...apiData.indicators, ...taxiiData];
-
-			console.log(
-				`✅ [Dashboard] Retrieved ${allIndicators.length} total indicators`
-			);
-			console.log(
-				`📊 [Dashboard] API sources: ${JSON.stringify(apiData.sources)}`
-			);
-
-			// Check if we got any meaningful data
-			if (allIndicators.length === 0) {
-				// If no real data was returned, use sample data instead
-				console.log(
-					`⚠️ [Dashboard] No threat intelligence data returned from APIs, using sample data`
-				);
-				setDashboard(getSampleDashboardData());
-			} else {
-				// Format the response into our Dashboard interface structure
-				// We'll use sample data for the sections we don't have real data for
-				const sampleData = getSampleDashboardData();
-
-				console.log(
-					`📊 [Dashboard] Building dashboard with ${allIndicators.length} real-time indicators`
-				);
-
-				const formattedData: Dashboard = {
-					recentIndicators: allIndicators.slice(0, 5),
-					activeCampaigns: sampleData.activeCampaigns, // Use sample campaigns until real ones are implemented
-					trendingThreats: sampleData.trendingThreats, // Use sample threats until real ones are implemented
-					recentReports: sampleData.recentReports, // Use sample reports until real ones are implemented
-					threatsByRegion: sampleData.threatsByRegion, // Use sample regions until real ones are implemented
-					threatsBySector: sampleData.threatsBySector, // Use sample sectors until real ones are implemented
-				};
-
-				setDashboard(formattedData);
-			}
-			setLoading(false);
-			setLastRefreshed(new Date());
-
-			console.log(
-				`✅ [Dashboard] Dashboard data loaded successfully at ${new Date().toLocaleTimeString()}`
-			);
-		} catch (error) {
-			console.error(`❌ [Dashboard] Error loading dashboard data:`, error);
-			setLoading(false);
-			// Fallback to sample data if API fails
-			setDashboard(getSampleDashboardData());
-		}
-	};
-
-	// Sample data function - In a real application, this would come from an API
-	const getSampleDashboardData = (): Dashboard => {
-		return {
-			recentIndicators: [
-				{
-					id: "ind-001",
-					type: "IP",
-					value: "45.153.243.77",
-					confidence: 90,
-					severity: "High",
-					firstSeen: "2023-05-10T12:00:00Z",
-					lastSeen: "2023-05-15T18:30:00Z",
-					tags: ["C2", "Ransomware", "TOR Exit Node"],
-					relatedActors: ["BlackCat", "ALPHV"],
-					description:
-						"Command and control server for BlackCat/ALPHV ransomware operations",
-				},
-				{
-					id: "ind-002",
-					type: "Domain",
-					value: "secureupdate-microsft.com",
-					confidence: 85,
-					severity: "High",
-					firstSeen: "2023-05-12T09:15:00Z",
-					lastSeen: "2023-05-16T22:45:00Z",
-					tags: ["Phishing", "Typosquatting", "Credential Theft"],
-					description:
-						"Typosquatting domain used in phishing campaigns against financial institutions",
-				},
-				{
-					id: "ind-003",
-					type: "Hash",
-					value: "5f2b7c3d4e5f6a7b8c9d0e1f2a3b4c5d",
-					confidence: 95,
-					severity: "High",
-					firstSeen: "2023-05-08T14:30:00Z",
-					lastSeen: "2023-05-15T11:20:00Z",
-					tags: ["Malware", "Backdoor", "RAT"],
-					relatedActors: ["APT41"],
-					description:
-						"Backdoor associated with APT41 operations targeting healthcare sector",
-				},
-			],
-			activeCampaigns: [
-				{
-					id: "camp-001",
-					name: "Operation ShadowHammer",
-					description: "Supply chain attack targeting software vendors",
-					actors: ["APT41", "BlackTech"],
-					targets: ["Technology", "Manufacturing"],
-					ttps: ["Supply Chain Compromise", "Code Signing Abuse"],
-					startDate: "2023-01-15T00:00:00Z",
-					status: "Active",
-					indicators: [],
-				},
-				{
-					id: "camp-002",
-					name: "DarkHydrus Resurgence",
-					description: "Targeted phishing campaign against government entities",
-					actors: ["DarkHydrus"],
-					targets: ["Government", "Diplomatic"],
-					ttps: ["Spear Phishing", "PowerShell Empire"],
-					startDate: "2023-03-22T00:00:00Z",
-					status: "Active",
-					indicators: [],
-				},
-			],
-			trendingThreats: [
-				{
-					category: "Ransomware",
-					trend: 15,
-					previousPeriod: 85,
-					currentPeriod: 100,
-				},
-				{
-					category: "Supply Chain Attacks",
-					trend: 23,
-					previousPeriod: 65,
-					currentPeriod: 88,
-				},
-				{
-					category: "Cloud Service Targeting",
-					trend: 30,
-					previousPeriod: 50,
-					currentPeriod: 80,
-				},
-				{
-					category: "IoT Exploitation",
-					trend: -5,
-					previousPeriod: 70,
-					currentPeriod: 65,
-				},
-			],
-			recentReports: [
-				{
-					id: "rep-001",
-					title: "BlackCat Ransomware: New Encryption Techniques",
-					summary:
-						"Analysis of new encryption methods employed by BlackCat ransomware group affecting critical infrastructure",
-					publishDate: "2023-05-14T00:00:00Z",
-					severity: "Critical",
-					confidence: "High",
-					affectedSectors: ["Energy", "Healthcare", "Financial"],
-					affectedRegions: ["North America", "Europe"],
-					mitigations: [
-						"Update endpoint protection to latest versions",
-						"Implement application allowlisting",
-						"Ensure offline backups are maintained",
-					],
-				},
-				{
-					id: "rep-002",
-					title: "APT41 Targeting Healthcare Providers",
-					summary:
-						"Ongoing targeted campaign against healthcare providers to exfiltrate patient data",
-					publishDate: "2023-05-10T00:00:00Z",
-					severity: "High",
-					confidence: "Medium",
-					affectedSectors: ["Healthcare"],
-					affectedRegions: ["North America", "Asia Pacific"],
-					mitigations: [
-						"Patch internet-facing systems",
-						"Enable MFA for all remote access",
-						"Monitor for suspicious PowerShell execution",
-					],
-				},
-			],
-			threatsByRegion: [
-				{ region: "North America", count: 156 },
-				{ region: "Europe", count: 142 },
-				{ region: "Asia Pacific", count: 124 },
-				{ region: "Middle East", count: 89 },
-				{ region: "Latin America", count: 67 },
-				{ region: "Africa", count: 43 },
-			],
-			threatsBySector: [
-				{ sector: "Financial", count: 135 },
-				{ sector: "Healthcare", count: 120 },
-				{ sector: "Government", count: 115 },
-				{ sector: "Technology", count: 105 },
-				{ sector: "Energy", count: 95 },
-				{ sector: "Manufacturing", count: 85 },
-				{ sector: "Retail", count: 65 },
-			],
-		};
-	};
-
-	// Chart components
-	const ThreatsBySectorChart = ({
-		data,
-	}: {
-		data: { sector: string; count: number }[];
-	}) => {
-		if (!data || data.length === 0) return null;
-
-		const chartData = {
-			labels: data.map((item) => item.sector),
-			datasets: [
-				{
-					label: "Threats by Sector",
-					data: data.map((item) => item.count),
-					backgroundColor: [
-						"rgba(255, 99, 132, 0.6)",
-						"rgba(54, 162, 235, 0.6)",
-						"rgba(255, 206, 86, 0.6)",
-						"rgba(75, 192, 192, 0.6)",
-						"rgba(153, 102, 255, 0.6)",
-						"rgba(255, 159, 64, 0.6)",
-						"rgba(199, 199, 199, 0.6)",
-					],
-					borderColor: [
-						"rgba(255, 99, 132, 1)",
-						"rgba(54, 162, 235, 1)",
-						"rgba(255, 206, 86, 1)",
-						"rgba(75, 192, 192, 1)",
-						"rgba(153, 102, 255, 1)",
-						"rgba(255, 159, 64, 1)",
-						"rgba(199, 199, 199, 1)",
-					],
-					borderWidth: 1,
-				},
-			],
-		};
-
-		return (
-			<div className="h-64">
-				<Doughnut
-					data={chartData}
-					options={{
-						responsive: true,
-						plugins: {
-							legend: {
-								position: "right",
-								labels: {
-									boxWidth: 12,
-									font: {
-										size: 10,
-									},
-								},
-							},
-							title: {
-								display: true,
-								text: "Threats by Industry Sector",
-								font: {
-									size: 14,
-								},
-							},
-						},
-						maintainAspectRatio: false,
-					}}
-				/>
-			</div>
-		);
-	};
-
-	const ThreatsByRegionChart = ({
-		data,
-	}: {
-		data: { region: string; count: number }[];
-	}) => {
-		if (!data || data.length === 0) return null;
-
-		const chartData = {
-			labels: data.map((item) => item.region),
-			datasets: [
-				{
-					label: "Threat Count",
-					data: data.map((item) => item.count),
-					backgroundColor: "rgba(75, 192, 192, 0.6)",
-					borderColor: "rgba(75, 192, 192, 1)",
-					borderWidth: 1,
-				},
-			],
-		};
-
-		return (
-			<div className="h-64">
-				<Bar
-					data={chartData}
-					options={{
-						responsive: true,
-						plugins: {
-							legend: {
-								display: false,
-							},
-							title: {
-								display: true,
-								text: "Threats by Geographic Region",
-								font: {
-									size: 14,
-								},
-							},
-						},
-						scales: {
-							y: {
-								beginAtZero: true,
-								title: {
-									display: true,
-									text: "Count",
-								},
-							},
-							x: {
-								title: {
-									display: true,
-									text: "Region",
-								},
-							},
-						},
-						maintainAspectRatio: false,
-					}}
-				/>
-			</div>
-		);
-	};
-
-	const TrendingThreatsChart = ({
-		data,
-	}: {
-		data: {
-			category: string;
-			trend: number;
-			previousPeriod: number;
-			currentPeriod: number;
-		}[];
-	}) => {
-		if (!data || data.length === 0) return null;
-
-		const chartData = {
-			labels: data.map((item) => item.category),
-			datasets: [
-				{
-					label: "Previous Period",
-					data: data.map((item) => item.previousPeriod),
-					backgroundColor: "rgba(54, 162, 235, 0.5)",
-					borderColor: "rgba(54, 162, 235, 1)",
-					borderWidth: 1,
-				},
-				{
-					label: "Current Period",
-					data: data.map((item) => item.currentPeriod),
-					backgroundColor: "rgba(255, 99, 132, 0.5)",
-					borderColor: "rgba(255, 99, 132, 1)",
-					borderWidth: 1,
-				},
-			],
-		};
-
-		return (
-			<div className="h-64">
-				<Bar
-					data={chartData}
-					options={{
-						responsive: true,
-						plugins: {
-							legend: {
-								position: "top",
-							},
-							title: {
-								display: true,
-								text: "Trending Threats",
-								font: {
-									size: 14,
-								},
-							},
-						},
-						scales: {
-							y: {
-								beginAtZero: true,
-								title: {
-									display: true,
-									text: "Threat Level",
-								},
-							},
-						},
-						maintainAspectRatio: false,
-					}}
-				/>
-			</div>
-		);
-	};
-
-	// Render Log Viewer
-	const renderLogViewer = () => {
-		if (!showLogs) return null;
-
-		return (
-			<div className="fixed bottom-0 right-0 w-full md:w-1/2 lg:w-1/3 h-64 bg-gray-900 text-gray-100 p-2 z-50 overflow-hidden flex flex-col">
-				<div className="flex justify-between items-center mb-2">
-					<h3 className="text-sm font-bold">Console Logs ({logs.length})</h3>
-					<button
-						onClick={() => setShowLogs(false)}
-						className="text-gray-400 hover:text-white"
-					>
-						Close
-					</button>
-				</div>
-				<div
-					ref={logRef}
-					className="flex-1 overflow-y-auto font-mono text-xs p-2 bg-gray-800 rounded"
+// Stat card component
+const StatCard = ({
+	title,
+	value,
+	trend,
+	className = "",
+	children,
+	...props
+}: StatCardProps) => (
+	<div
+		className={`p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md ${className}`}
+		{...props}
+	>
+		<div className="text-sm text-gray-500 dark:text-gray-400">{title}</div>
+		<div className="mt-2 text-3xl font-semibold">{value}</div>
+		{trend && (
+			<div className="mt-2">
+				<span
+					className={`text-sm ${
+						trend.positive ? "text-green-500" : "text-red-500"
+					} flex items-center`}
 				>
-					{logs.map((log, i) => (
-						<div key={i} className="mb-1">
-							<span className="text-gray-500">
-								[{log.timestamp.toLocaleTimeString()}]
-							</span>{" "}
-							<span
-								className={
-									log.message.includes("✅")
-										? "text-green-400"
-										: log.message.includes("❌")
-										? "text-red-400"
-										: log.message.includes("⚠️")
-										? "text-yellow-400"
-										: log.message.includes("🔄")
-										? "text-blue-400"
-										: "text-gray-300"
-								}
-							>
-								{log.message}
-							</span>
-						</div>
-					))}
-				</div>
+					{trend.positive ? "↑" : "↓"} {trend.value}% {trend.label}
+				</span>
 			</div>
-		);
+		)}
+		{children}
+	</div>
+);
+
+// Add these new components
+const ThreatScoreBadge = ({ score }: { score: number }) => {
+	let bgColor = "bg-green-100";
+	let textColor = "text-green-800";
+
+	if (score >= 8.5) {
+		bgColor = "bg-red-100";
+		textColor = "text-red-800";
+	} else if (score >= 6.5) {
+		bgColor = "bg-orange-100";
+		textColor = "text-orange-800";
+	} else if (score >= 4.5) {
+		bgColor = "bg-yellow-100";
+		textColor = "text-yellow-800";
+	}
+
+	return (
+		<span
+			className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
+		>
+			{score.toFixed(1)}
+		</span>
+	);
+};
+
+const DashboardMetricCard = ({
+	title,
+	value,
+	icon,
+	trend,
+	color = "blue",
+}: {
+	title: string;
+	value: number | string;
+	icon?: React.ReactNode;
+	trend?: { value: number; label: string; positive: boolean };
+	color?: "blue" | "green" | "red" | "purple" | "yellow";
+}) => {
+	const colors = {
+		blue: "bg-blue-500 text-white",
+		green: "bg-green-500 text-white",
+		red: "bg-red-500 text-white",
+		purple: "bg-purple-500 text-white",
+		yellow: "bg-yellow-500 text-white",
 	};
 
-	// Render the refresh button and timestamp
-	const renderRefreshControls = () => {
-		return (
-			<div className="mb-6">
-				<div className="flex items-center justify-between mb-2">
-					<div className="flex items-center">
-						<div className="text-sm text-gray-500 mr-3">
-							Last updated: {lastRefreshed.toLocaleTimeString()}
-						</div>
-						{!config.useMockData && (
-							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-								<span className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
-								Real-time data
-							</span>
-						)}
-						{config.useMockData && (
-							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-								<span className="w-2 h-2 bg-yellow-500 rounded-full mr-1.5"></span>
-								Sample data
-							</span>
-						)}
-					</div>
-					<div className="flex items-center">
-						<button
-							onClick={() => setShowLogs(!showLogs)}
-							className="flex items-center px-2 py-1 mr-2 text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-						>
-							{showLogs ? "Hide Logs" : "Show Logs"}
-						</button>
-						<button
-							onClick={refreshData}
-							disabled={loading}
-							className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-								loading
-									? "bg-gray-200 text-gray-500 cursor-not-allowed"
-									: "bg-blue-50 text-blue-600 hover:bg-blue-100"
-							}`}
-						>
-							{loading ? (
-								<>
-									<svg
-										className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-600"
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-									>
-										<circle
-											className="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											strokeWidth="4"
-										></circle>
-										<path
-											className="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-										></path>
-									</svg>
-									Refreshing...
-								</>
-							) : (
-								<>
-									<svg
-										className="-ml-1 mr-2 h-4 w-4"
-										xmlns="http://www.w3.org/2000/svg"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-									>
-										<path
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-											d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-										/>
-									</svg>
-									Refresh Data
-								</>
-							)}
-						</button>
+	return (
+		<div className={`rounded-lg overflow-hidden shadow-lg ${colors[color]}`}>
+			<div className="px-4 py-5 sm:p-6">
+				<div className="flex items-center">
+					{icon && <div className="flex-shrink-0 mr-3">{icon}</div>}
+					<div>
+						<dt className="text-sm font-medium opacity-80 truncate">{title}</dt>
+						<dd className="mt-1 text-3xl font-semibold">{value}</dd>
 					</div>
 				</div>
-				{config.autoRefreshInterval > 0 && (
-					<div className="text-xs text-gray-500">
-						Auto-refreshes every {config.autoRefreshInterval / 1000} seconds
+				{trend && (
+					<div className="mt-2">
+						<span
+							className={`text-sm ${
+								trend.positive ? "text-green-100" : "text-red-100"
+							} flex items-center`}
+						>
+							{trend.positive ? "↑" : "↓"} {trend.value}% {trend.label}
+						</span>
 					</div>
 				)}
 			</div>
-		);
+		</div>
+	);
+};
+
+export default function Page() {
+	const [activeTab, setActiveTab] = useState<
+		"dashboard" | "explorer" | "search" | "taxii"
+	>("dashboard");
+	const [query, setQuery] = useState("");
+	const [results, setResults] = useState<ThreatResult[]>([]);
+	const [allIocs, setAllIocs] = useState<ThreatResult[]>([]);
+	const [loading, setLoading] = useState(false);
+	const [taxiiLoading, setTaxiiLoading] = useState(false);
+	const [error, setError] = useState("");
+	const [taxiiError, setTaxiiError] = useState("");
+	const [taxiiSuccess, setTaxiiSuccess] = useState("");
+	const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
+		totalThreats: 0,
+		newThreats: 0,
+		topDomains: [],
+		topIPs: [],
+		threatsByType: [],
+	});
+	const [taxiiStatus, setTaxiiStatus] = useState<TaxiiStatusData | null>(null);
+	const [selectedIoc, setSelectedIoc] = useState<ThreatResult | null>(null);
+
+	// Filters
+	const [typeFilter, setTypeFilter] = useState("all");
+	const [sourceFilter, setSourceFilter] = useState("all");
+	const [timeFilter, setTimeFilter] = useState("all");
+
+	// Load dashboard data on initial load
+	useEffect(() => {
+		fetchDashboardStats();
+		fetchAllIocs();
+	}, []);
+
+	// Load TAXII status when the TAXII tab is active
+	useEffect(() => {
+		if (activeTab === "taxii") {
+			fetchTaxiiStatus();
+		}
+	}, [activeTab]);
+
+	const fetchDashboardStats = async () => {
+		try {
+			const response = await fetch("/api/tools/threat-intelligence/dashboard");
+			if (response.ok) {
+				const data = await response.json();
+				setDashboardStats(data);
+			}
+		} catch (err) {
+			console.error("Error fetching dashboard stats:", err);
+		}
 	};
 
-	// Dashboard view
-	const renderDashboard = () => {
-		if (!dashboard) return null;
+	const fetchAllIocs = async () => {
+		setLoading(true);
+		try {
+			const response = await fetch("/api/tools/threat-intelligence/iocs");
+			if (response.ok) {
+				const data = await response.json();
+				setAllIocs(data.results || []);
+			}
+		} catch (err) {
+			console.error("Error fetching IOCs:", err);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const fetchTaxiiStatus = async () => {
+		setTaxiiLoading(true);
+		setTaxiiError("");
+		try {
+			const response = await fetch(
+				"/api/tools/threat-intelligence/taxii-status"
+			);
+			if (response.ok) {
+				const data = await response.json();
+				setTaxiiStatus(data);
+			} else {
+				setTaxiiError(
+					"Failed to load TAXII configuration. The server may not be available."
+				);
+			}
+		} catch (err) {
+			console.error("Error fetching TAXII status:", err);
+			setTaxiiError("An error occurred while fetching TAXII configuration");
+		} finally {
+			setTaxiiLoading(false);
+		}
+	};
+
+	const triggerTaxiiFetch = async () => {
+		setTaxiiLoading(true);
+		setTaxiiError("");
+		setTaxiiSuccess("");
+		try {
+			const response = await fetch(
+				"/api/tools/threat-intelligence/taxii-fetch",
+				{
+					method: "POST",
+				}
+			);
+
+			if (response.ok) {
+				const data = await response.json();
+				setTaxiiSuccess(
+					`Successfully fetched data. Added ${
+						data.addedIocs
+					} new threat indicators in ${Math.round(data.duration)} seconds.`
+				);
+				// Refresh TAXII status and dashboard stats
+				fetchTaxiiStatus();
+				fetchDashboardStats();
+				fetchAllIocs();
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				setTaxiiError(errorData.error || "Failed to fetch TAXII data");
+			}
+		} catch (err) {
+			console.error("Error triggering TAXII fetch:", err);
+			setTaxiiError("An error occurred while trying to fetch TAXII data");
+		} finally {
+			setTaxiiLoading(false);
+		}
+	};
+
+	const searchThreat = async () => {
+		if (!query.trim()) return;
+
+		setLoading(true);
+		setError("");
+
+		try {
+			const response = await fetch(
+				`/api/tools/threat-intelligence/search?query=${encodeURIComponent(
+					query
+				)}`
+			);
+
+			if (!response.ok) {
+				throw new Error("Failed to fetch threat intelligence data");
+			}
+
+			const data = await response.json();
+			setResults(data.results || []);
+			setActiveTab("search");
+		} catch (err) {
+			setError(
+				"An error occurred while fetching threat data. Please try again."
+			);
+			console.error(err);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleIocClick = (ioc: ThreatResult) => {
+		setSelectedIoc(ioc);
+	};
+
+	const handleBackToList = () => {
+		setSelectedIoc(null);
+	};
+
+	const getFilteredIocs = () => {
+		return allIocs.filter((ioc) => {
+			const matchesType = typeFilter === "all" || ioc.type === typeFilter;
+			const matchesSource =
+				sourceFilter === "all" || ioc.source === sourceFilter;
+			// Time filter would need actual implementation based on firstSeen/lastSeen
+			return matchesType && matchesSource;
+		});
+	};
+
+	const typeOptions = [
+		{ value: "all", label: "All Types" },
+		{ value: "ip", label: "IP Address" },
+		{ value: "domain", label: "Domain" },
+		{ value: "url", label: "URL" },
+		{ value: "hash", label: "File Hash" },
+		{ value: "email", label: "Email" },
+	];
+
+	const sourceOptions = [
+		{ value: "all", label: "All Sources" },
+		{ value: "alienvault", label: "AlienVault OTX" },
+		{ value: "misp", label: "MISP" },
+		{ value: "virustotal", label: "VirusTotal" },
+		{ value: "threatfox", label: "ThreatFox" },
+	];
+
+	const timeOptions = [
+		{ value: "all", label: "All Time" },
+		{ value: "24h", label: "Last 24 Hours" },
+		{ value: "7d", label: "Last 7 Days" },
+		{ value: "30d", label: "Last 30 Days" },
+		{ value: "90d", label: "Last 90 Days" },
+	];
+
+	// Render dashboard view
+	const renderDashboard = () => (
+		<div>
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+				<DashboardMetricCard
+					title="Total Threats"
+					value={dashboardStats.totalThreats}
+					color="blue"
+				/>
+				<DashboardMetricCard
+					title="New Threats (24h)"
+					value={dashboardStats.newThreats}
+					trend={{ value: 12, label: "vs previous day", positive: true }}
+					color="green"
+				/>
+				<DashboardMetricCard
+					title="Most Active Source"
+					value={dashboardStats.mostActiveSource || "AlienVault OTX"}
+					color="purple"
+				/>
+				<DashboardMetricCard
+					title="Highest Risk Score"
+					value={
+						dashboardStats.highestRiskScore
+							? `${dashboardStats.highestRiskScore}/10`
+							: "9.8/10"
+					}
+					color="red"
+				/>
+			</div>
+
+			{dashboardStats.isMockData && (
+				<div className="mb-6">
+					<SuccessAlert className="bg-amber-50 border-amber-200 text-amber-800">
+						<AlertTitle className="text-amber-800">Using Demo Data</AlertTitle>
+						<AlertDescription>
+							The dashboard is currently displaying demo data. Connect to a real
+							threat intelligence backend to see live data.
+						</AlertDescription>
+					</SuccessAlert>
+				</div>
+			)}
+
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+					<CardHeader className="border-b dark:border-gray-700">
+						<CardTitle className="text-lg font-bold">
+							Top Malicious Domains
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="p-0">
+						<Table>
+							<TableHeader>
+								<TableRow className="hover:bg-gray-50 dark:hover:bg-gray-700">
+									<TableHead className="font-semibold">Domain</TableHead>
+									<TableHead className="font-semibold text-right">
+										Count
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{dashboardStats.topDomains.map((item, i) => (
+									<TableRow
+										key={i}
+										className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
+										<TableCell className="font-medium">{item.domain}</TableCell>
+										<TableCell className="text-right">
+											<Badge variant="outline">{item.count}</Badge>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</CardContent>
+				</Card>
+
+				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+					<CardHeader className="border-b dark:border-gray-700">
+						<CardTitle className="text-lg font-bold">
+							Top Malicious IPs
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="p-0">
+						<Table>
+							<TableHeader>
+								<TableRow className="hover:bg-gray-50 dark:hover:bg-gray-700">
+									<TableHead className="font-semibold">IP Address</TableHead>
+									<TableHead className="font-semibold text-right">
+										Count
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{dashboardStats.topIPs.map((item, i) => (
+									<TableRow
+										key={i}
+										className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
+										<TableCell className="font-medium">{item.ip}</TableCell>
+										<TableCell className="text-right">
+											<Badge variant="outline">{item.count}</Badge>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</CardContent>
+				</Card>
+			</div>
+
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+					<CardHeader className="border-b dark:border-gray-700">
+						<CardTitle className="text-lg font-bold">Threats by Type</CardTitle>
+					</CardHeader>
+					<CardContent className="py-4">
+						{dashboardStats.threatsByType.length > 0 ? (
+							<div className="h-64">
+								<Bar
+									data={{
+										labels: dashboardStats.threatsByType.map(
+											(item) => item.type
+										),
+										datasets: [
+											{
+												label: "Count",
+												data: dashboardStats.threatsByType.map(
+													(item) => item.count
+												),
+												backgroundColor: [
+													"rgba(255, 99, 132, 0.8)",
+													"rgba(54, 162, 235, 0.8)",
+													"rgba(255, 206, 86, 0.8)",
+													"rgba(75, 192, 192, 0.8)",
+													"rgba(153, 102, 255, 0.8)",
+												],
+												borderColor: [
+													"rgba(255, 99, 132, 1)",
+													"rgba(54, 162, 235, 1)",
+													"rgba(255, 206, 86, 1)",
+													"rgba(75, 192, 192, 1)",
+													"rgba(153, 102, 255, 1)",
+												],
+												borderWidth: 1,
+											},
+										],
+									}}
+									options={{
+										responsive: true,
+										maintainAspectRatio: false,
+										plugins: {
+											legend: {
+												display: false,
+											},
+											title: {
+												display: false,
+											},
+										},
+										scales: {
+											y: {
+												beginAtZero: true,
+											},
+										},
+									}}
+								/>
+							</div>
+						) : (
+							<div className="flex items-center justify-center h-64 text-gray-500">
+								No threat type data available
+							</div>
+						)}
+					</CardContent>
+				</Card>
+
+				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+					<CardHeader className="border-b dark:border-gray-700">
+						<CardTitle className="text-lg font-bold">
+							Distribution by Source
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="py-4">
+						<div className="h-64 flex items-center justify-center">
+							<div style={{ width: "100%", height: "100%", maxWidth: "250px" }}>
+								<Pie
+									data={{
+										labels: dashboardStats.sourceDistribution
+											? dashboardStats.sourceDistribution.map(
+													(item) => item.source
+											  )
+											: [
+													"AlienVault OTX",
+													"MITRE ATT&CK",
+													"ThreatFox",
+													"MISP",
+													"VirusTotal",
+											  ],
+										datasets: [
+											{
+												data: dashboardStats.sourceDistribution
+													? dashboardStats.sourceDistribution.map(
+															(item) => item.count
+													  )
+													: [42, 23, 15, 12, 8],
+												backgroundColor: [
+													"rgba(255, 99, 132, 0.8)",
+													"rgba(54, 162, 235, 0.8)",
+													"rgba(255, 206, 86, 0.8)",
+													"rgba(75, 192, 192, 0.8)",
+													"rgba(153, 102, 255, 0.8)",
+												],
+												borderColor: [
+													"rgba(255, 99, 132, 1)",
+													"rgba(54, 162, 235, 1)",
+													"rgba(255, 206, 86, 1)",
+													"rgba(75, 192, 192, 1)",
+													"rgba(153, 102, 255, 1)",
+												],
+												borderWidth: 1,
+											},
+										],
+									}}
+									options={{
+										responsive: true,
+										maintainAspectRatio: false,
+									}}
+								/>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		</div>
+	);
+
+	// Render IOC Explorer view
+	const renderExplorer = () => {
+		if (selectedIoc) {
+			return (
+				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+					<CardHeader className="border-b dark:border-gray-700">
+						<div className="flex justify-between items-center">
+							<CardTitle className="text-xl font-bold">IOC Details</CardTitle>
+							<Button
+								onClick={handleBackToList}
+								className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+							>
+								← Back to List
+							</Button>
+						</div>
+					</CardHeader>
+					<CardContent className="p-6">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Indicator
+								</h3>
+								<p className="mt-1 text-lg font-bold break-all">
+									{selectedIoc.indicator}
+								</p>
+							</div>
+							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Type
+								</h3>
+								<div className="mt-1">
+									<Badge className="text-sm bg-blue-100 text-blue-800">
+										{selectedIoc.type}
+									</Badge>
+								</div>
+							</div>
+							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Threat Score
+								</h3>
+								<div className="mt-1 flex items-center">
+									<div
+										className="w-full bg-gray-200 rounded-full h-2.5 mr-2 dark:bg-gray-700"
+										style={{ maxWidth: "150px" }}
+									>
+										<div
+											className={`h-2.5 rounded-full ${
+												selectedIoc.threatScore >= 8.5
+													? "bg-red-600"
+													: selectedIoc.threatScore >= 6.5
+													? "bg-orange-500"
+													: selectedIoc.threatScore >= 4.5
+													? "bg-yellow-400"
+													: "bg-green-500"
+											}`}
+											style={{
+												width: `${(selectedIoc.threatScore / 10) * 100}%`,
+											}}
+										></div>
+									</div>
+									<span className="text-lg font-bold">
+										{selectedIoc.threatScore}
+									</span>
+								</div>
+							</div>
+							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Source
+								</h3>
+								<p className="mt-1 text-lg font-medium">{selectedIoc.source}</p>
+							</div>
+							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									First Seen
+								</h3>
+								<p className="mt-1 text-base font-medium">
+									{selectedIoc.firstSeen
+										? new Date(selectedIoc.firstSeen).toLocaleString()
+										: "Unknown"}
+								</p>
+							</div>
+							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+									Last Seen
+								</h3>
+								<p className="mt-1 text-base font-medium">
+									{selectedIoc.lastSeen
+										? new Date(selectedIoc.lastSeen).toLocaleString()
+										: "Unknown"}
+								</p>
+							</div>
+						</div>
+
+						{selectedIoc.sourceUrl && (
+							<div className="mb-6 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+									Source URL
+								</h3>
+								<a
+									href={selectedIoc.sourceUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-blue-600 hover:underline break-all"
+								>
+									{selectedIoc.sourceUrl}
+								</a>
+							</div>
+						)}
+
+						{selectedIoc.sampleText && (
+							<div className="mb-6 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+									Description
+								</h3>
+								<div className="p-4 bg-white dark:bg-gray-800 rounded border text-sm">
+									{selectedIoc.sampleText}
+								</div>
+							</div>
+						)}
+
+						{selectedIoc.tags && selectedIoc.tags.length > 0 && (
+							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+									Tags
+								</h3>
+								<div className="flex flex-wrap gap-2">
+									{selectedIoc.tags.map((tag, i) => (
+										<Badge
+											key={i}
+											className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
+										>
+											{tag}
+										</Badge>
+									))}
+								</div>
+							</div>
+						)}
+					</CardContent>
+				</Card>
+			);
+		}
+
+		const filteredIocs = getFilteredIocs();
 
 		return (
 			<>
-				{renderRefreshControls()}
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-					{/* Top row - Threat Summary */}
-					<div className="bg-white rounded-lg shadow p-4 col-span-1 md:col-span-2">
-						<h2 className="text-xl font-semibold mb-3">
-							Threat Intelligence Summary
-						</h2>
-						<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-							<div className="bg-blue-50 p-4 rounded-lg">
-								<p className="text-sm text-gray-600 mb-1">Recent Indicators</p>
-								<p className="text-2xl font-bold">
-									{dashboard.recentIndicators.length}
-								</p>
+				<Card className="mb-6 shadow-lg border-0 bg-white dark:bg-gray-800">
+					<CardHeader className="border-b dark:border-gray-700">
+						<CardTitle className="text-lg font-bold">
+							IOC Explorer Filters
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="p-4">
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									Type
+								</label>
+								<Select
+									value={typeFilter}
+									onChange={(e) => setTypeFilter(e.target.value)}
+									options={typeOptions}
+								/>
 							</div>
-							<div className="bg-red-50 p-4 rounded-lg">
-								<p className="text-sm text-gray-600 mb-1">Active Campaigns</p>
-								<p className="text-2xl font-bold">
-									{dashboard.activeCampaigns.length}
-								</p>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									Source
+								</label>
+								<Select
+									value={sourceFilter}
+									onChange={(e) => setSourceFilter(e.target.value)}
+									options={sourceOptions}
+								/>
 							</div>
-							<div className="bg-yellow-50 p-4 rounded-lg">
-								<p className="text-sm text-gray-600 mb-1">Recent Reports</p>
-								<p className="text-2xl font-bold">
-									{dashboard.recentReports.length}
-								</p>
-							</div>
-							<div className="bg-green-50 p-4 rounded-lg">
-								<p className="text-sm text-gray-600 mb-1">Affected Sectors</p>
-								<p className="text-2xl font-bold">
-									{dashboard.threatsBySector.length}
-								</p>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+									Time Range
+								</label>
+								<Select
+									value={timeFilter}
+									onChange={(e) => setTimeFilter(e.target.value)}
+									options={timeOptions}
+								/>
 							</div>
 						</div>
-					</div>
+					</CardContent>
+				</Card>
 
-					{/* Charts */}
-					<div className="bg-white rounded-lg shadow p-4">
-						<ThreatsBySectorChart data={dashboard.threatsBySector} />
-					</div>
-					<div className="bg-white rounded-lg shadow p-4">
-						<ThreatsByRegionChart data={dashboard.threatsByRegion} />
-					</div>
-					<div className="bg-white rounded-lg shadow p-4 col-span-1 md:col-span-2">
-						<TrendingThreatsChart data={dashboard.trendingThreats} />
-					</div>
-
-					{/* Recent Reports */}
-					<div className="bg-white rounded-lg shadow p-4 col-span-1 md:col-span-2">
-						<h2 className="text-xl font-semibold mb-3">
-							Recent Intelligence Reports
-						</h2>
-						<div className="overflow-x-auto">
-							<table className="min-w-full">
-								<thead className="bg-gray-50">
-									<tr>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Title
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Published
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Severity
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Affected Sectors
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Actions
-										</th>
-									</tr>
-								</thead>
-								<tbody className="bg-white divide-y divide-gray-200">
-									{dashboard.recentReports.map((report) => (
-										<tr key={report.id} className="hover:bg-gray-50">
-											<td className="px-4 py-2 text-sm font-medium text-gray-800">
-												{report.title}
-											</td>
-											<td className="px-4 py-2 text-sm text-gray-600">
-												{new Date(report.publishDate).toLocaleDateString()}
-											</td>
-											<td className="px-4 py-2">
-												<span
-													className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-														report.severity === "Critical"
-															? "bg-red-100 text-red-800"
-															: report.severity === "High"
-															? "bg-orange-100 text-orange-800"
-															: report.severity === "Medium"
-															? "bg-yellow-100 text-yellow-800"
-															: "bg-green-100 text-green-800"
-													}`}
-												>
-													{report.severity}
-												</span>
-											</td>
-											<td className="px-4 py-2 text-sm text-gray-600">
-												{report.affectedSectors.join(", ")}
-											</td>
-											<td className="px-4 py-2 text-sm">
-												<button
-													onClick={() => setSelectedReport(report)}
-													className="text-blue-600 hover:text-blue-800"
-												>
-													View Details
-												</button>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					</div>
-
-					{/* Recent Indicators */}
-					<div className="bg-white rounded-lg shadow p-4 col-span-1 md:col-span-2">
-						<h2 className="text-xl font-semibold mb-3">
-							Latest Threat Indicators
-						</h2>
-						<div className="overflow-x-auto">
-							<table className="min-w-full">
-								<thead className="bg-gray-50">
-									<tr>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Type
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Value
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Confidence
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Severity
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Tags
-										</th>
-										<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-											Actions
-										</th>
-									</tr>
-								</thead>
-								<tbody className="bg-white divide-y divide-gray-200">
-									{dashboard.recentIndicators.map((indicator) => (
-										<tr key={indicator.id} className="hover:bg-gray-50">
-											<td className="px-4 py-2 text-sm font-medium text-gray-800">
-												{indicator.type}
-											</td>
-											<td className="px-4 py-2 text-sm font-mono">
-												{indicator.value}
-											</td>
-											<td className="px-4 py-2 text-sm text-gray-600">
-												{indicator.confidence}%
-											</td>
-											<td className="px-4 py-2">
-												<span
-													className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-														indicator.severity === "High"
-															? "bg-red-100 text-red-800"
-															: indicator.severity === "Medium"
-															? "bg-yellow-100 text-yellow-800"
-															: "bg-green-100 text-green-800"
-													}`}
-												>
-													{indicator.severity}
-												</span>
-											</td>
-											<td className="px-4 py-2 text-sm text-gray-600">
-												<div className="flex flex-wrap gap-1">
-													{indicator.tags.map((tag, index) => (
-														<span
-															key={index}
-															className="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded"
-														>
-															{tag}
-														</span>
-													))}
-												</div>
-											</td>
-											<td className="px-4 py-2 text-sm">
-												<button
-													onClick={() => setSelectedIndicator(indicator)}
-													className="text-blue-600 hover:text-blue-800"
-												>
-													View Details
-												</button>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				</div>
+				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
+					<CardHeader className="border-b dark:border-gray-700">
+						<CardTitle className="text-lg font-bold">IOC Explorer</CardTitle>
+						<CardDescription>
+							Showing {filteredIocs.length} indicators of compromise
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="p-0">
+						<Table>
+							<TableHeader>
+								<TableRow className="hover:bg-gray-50 dark:hover:bg-gray-700">
+									<TableHead className="font-semibold">Indicator</TableHead>
+									<TableHead className="font-semibold">Type</TableHead>
+									<TableHead className="font-semibold">Threat Score</TableHead>
+									<TableHead className="font-semibold">Source</TableHead>
+									<TableHead className="font-semibold">First Seen</TableHead>
+									<TableHead className="font-semibold">Last Seen</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{filteredIocs.map((ioc, index) => (
+									<TableRow
+										key={index}
+										onClick={() => handleIocClick(ioc)}
+										className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+									>
+										<TableCell className="font-medium">
+											{ioc.indicator}
+										</TableCell>
+										<TableCell>
+											<Badge variant="outline">{ioc.type}</Badge>
+										</TableCell>
+										<TableCell>
+											<ThreatScoreBadge score={ioc.threatScore} />
+										</TableCell>
+										<TableCell>{ioc.source}</TableCell>
+										<TableCell>
+											{ioc.firstSeen
+												? new Date(ioc.firstSeen).toLocaleDateString()
+												: "-"}
+										</TableCell>
+										<TableCell>
+											{ioc.lastSeen
+												? new Date(ioc.lastSeen).toLocaleDateString()
+												: "-"}
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</CardContent>
+				</Card>
 			</>
 		);
 	};
 
-	// Indicator details modal
-	const IndicatorDetailsModal = ({
-		indicator,
-		onClose,
-	}: {
-		indicator: ThreatIndicator | null;
-		onClose: () => void;
-	}) => {
-		if (!indicator) return null;
+	// Render TAXII configuration view
+	const renderTaxii = () => (
+		<div>
+			{taxiiError && (
+				<Alert>
+					<AlertTitle>Error</AlertTitle>
+					<AlertDescription>{taxiiError}</AlertDescription>
+				</Alert>
+			)}
 
-		return (
-			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-				<div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-					<div className="p-6">
-						<div className="flex justify-between items-start mb-4">
-							<h2 className="text-xl font-bold text-gray-900">
-								Threat Indicator Details
-							</h2>
-							<button
-								onClick={onClose}
-								className="text-gray-500 hover:text-gray-700"
-							>
-								<svg
-									className="w-5 h-5"
-									fill="currentColor"
-									viewBox="0 0 20 20"
-								>
-									<path
-										fillRule="evenodd"
-										d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-										clipRule="evenodd"
-									/>
-								</svg>
-							</button>
-						</div>
+			{taxiiSuccess && (
+				<SuccessAlert>
+					<AlertTitle>Success</AlertTitle>
+					<AlertDescription>{taxiiSuccess}</AlertDescription>
+				</SuccessAlert>
+			)}
 
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-							<div>
-								<p className="text-sm text-gray-600">Type</p>
-								<p className="font-medium">{indicator.type}</p>
-							</div>
-							<div>
-								<p className="text-sm text-gray-600">Value</p>
-								<p className="font-mono">{indicator.value}</p>
-							</div>
-							<div>
-								<p className="text-sm text-gray-600">Confidence</p>
-								<p className="font-medium">{indicator.confidence}%</p>
-							</div>
-							<div>
-								<p className="text-sm text-gray-600">Severity</p>
-								<p className="font-medium">
-									<span
-										className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-											indicator.severity === "High"
-												? "bg-red-100 text-red-800"
-												: indicator.severity === "Medium"
-												? "bg-yellow-100 text-yellow-800"
-												: "bg-green-100 text-green-800"
-										}`}
-									>
-										{indicator.severity}
-									</span>
-								</p>
-							</div>
-						</div>
-
-						<div className="mb-4">
-							<p className="text-sm text-gray-600 mb-1">First Seen</p>
-							<p className="font-medium">
-								{new Date(indicator.firstSeen).toLocaleString()}
-							</p>
-						</div>
-
-						<div className="mb-4">
-							<p className="text-sm text-gray-600 mb-1">Last Seen</p>
-							<p className="font-medium">
-								{new Date(indicator.lastSeen).toLocaleString()}
-							</p>
-						</div>
-
-						{indicator.description && (
-							<div className="mb-4">
-								<p className="text-sm text-gray-600 mb-1">Description</p>
-								<p className="text-gray-800">{indicator.description}</p>
-							</div>
-						)}
-
-						<div className="mb-4">
-							<p className="text-sm text-gray-600 mb-1">Tags</p>
-							<div className="flex flex-wrap gap-1 mt-1">
-								{indicator.tags.map((tag, index) => (
-									<span
-										key={index}
-										className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
-									>
-										{tag}
-									</span>
-								))}
-							</div>
-						</div>
-
-						{indicator.relatedActors && indicator.relatedActors.length > 0 && (
-							<div className="mb-4">
-								<p className="text-sm text-gray-600 mb-1">
-									Related Threat Actors
-								</p>
-								<div className="flex flex-wrap gap-1 mt-1">
-									{indicator.relatedActors.map((actor, index) => (
-										<span
-											key={index}
-											className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm"
-										>
-											{actor}
-										</span>
-									))}
-								</div>
-							</div>
-						)}
-
-						<div className="mt-6 flex justify-end">
-							<button
-								onClick={onClose}
-								className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-							>
-								Close
-							</button>
-						</div>
+			<Card className="mb-6">
+				<CardHeader>
+					<div className="flex justify-between items-center">
+						<CardTitle>TAXII Intelligence Feeds</CardTitle>
+						<Button
+							onClick={triggerTaxiiFetch}
+							disabled={taxiiLoading}
+							className="bg-green-600 hover:bg-green-700"
+						>
+							{taxiiLoading ? "Fetching..." : "Fetch Now"}
+						</Button>
 					</div>
-				</div>
-			</div>
-		);
-	};
-
-	// Report details modal
-	const ReportDetailsModal = ({
-		report,
-		onClose,
-	}: {
-		report: IntelligenceReport | null;
-		onClose: () => void;
-	}) => {
-		if (!report) return null;
-
-		return (
-			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-				<div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-					<div className="p-6">
-						<div className="flex justify-between items-start mb-4">
-							<h2 className="text-xl font-bold text-gray-900">
-								{report.title}
-							</h2>
-							<button
-								onClick={onClose}
-								className="text-gray-500 hover:text-gray-700"
-							>
-								<svg
-									className="w-5 h-5"
-									fill="currentColor"
-									viewBox="0 0 20 20"
-								>
-									<path
-										fillRule="evenodd"
-										d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-										clipRule="evenodd"
-									/>
-								</svg>
-							</button>
+					<CardDescription>
+						Configured TAXII servers for fetching threat intelligence
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{taxiiLoading && !taxiiStatus ? (
+						<div className="text-center py-4">
+							Loading TAXII configuration...
 						</div>
-
-						<div className="flex flex-wrap gap-2 mb-4">
-							<span
-								className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-									report.severity === "Critical"
-										? "bg-red-100 text-red-800"
-										: report.severity === "High"
-										? "bg-orange-100 text-orange-800"
-										: report.severity === "Medium"
-										? "bg-yellow-100 text-yellow-800"
-										: "bg-green-100 text-green-800"
-								}`}
-							>
-								{report.severity} Severity
-							</span>
-
-							<span
-								className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-									report.confidence === "High"
-										? "bg-blue-100 text-blue-800"
-										: report.confidence === "Medium"
-										? "bg-indigo-100 text-indigo-800"
-										: "bg-purple-100 text-purple-800"
-								}`}
-							>
-								{report.confidence} Confidence
-							</span>
-
-							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-								Published: {new Date(report.publishDate).toLocaleDateString()}
-							</span>
-						</div>
-
-						<div className="mb-6">
-							<h3 className="text-lg font-medium mb-2">Summary</h3>
-							<p className="text-gray-800 mb-4">{report.summary}</p>
-
-							{report.fullReport && (
-								<div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-									<h4 className="text-md font-medium mb-2">Full Analysis</h4>
-									<p className="text-gray-800 whitespace-pre-line">
-										{report.fullReport}
-									</p>
+					) : (
+						<>
+							{taxiiStatus &&
+							taxiiStatus.taxiSources &&
+							taxiiStatus.taxiSources.length > 0 ? (
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Source</TableHead>
+											<TableHead>Collection</TableHead>
+											<TableHead>URL</TableHead>
+											<TableHead>IOC Count</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{taxiiStatus.taxiSources.map((source, i) => (
+											<TableRow key={i}>
+												<TableCell>{source.name}</TableCell>
+												<TableCell>{source.collection}</TableCell>
+												<TableCell className="text-xs">{source.url}</TableCell>
+												<TableCell>{source.iocCount}</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							) : (
+								<div className="text-center py-4 text-gray-500">
+									No TAXII sources configured or available
 								</div>
 							)}
-						</div>
 
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<div>
-								<h3 className="text-lg font-medium mb-2">Affected Sectors</h3>
-								<div className="flex flex-wrap gap-1">
-									{report.affectedSectors.map((sector, index) => (
-										<span
-											key={index}
-											className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm"
-										>
-											{sector}
-										</span>
-									))}
-								</div>
-							</div>
-
-							<div>
-								<h3 className="text-lg font-medium mb-2">Affected Regions</h3>
-								<div className="flex flex-wrap gap-1">
-									{report.affectedRegions.map((region, index) => (
-										<span
-											key={index}
-											className="bg-green-50 text-green-700 px-2 py-1 rounded text-sm"
-										>
-											{region}
-										</span>
-									))}
-								</div>
-							</div>
-						</div>
-
-						{report.mitigations && report.mitigations.length > 0 && (
 							<div className="mt-6">
 								<h3 className="text-lg font-medium mb-2">
-									Recommended Mitigations
+									How to Configure TAXII Sources
 								</h3>
-								<ul className="list-disc pl-5 space-y-1">
-									{report.mitigations.map((mitigation, index) => (
-										<li key={index} className="text-gray-800">
-											{mitigation}
-										</li>
-									))}
-								</ul>
+								<div className="p-4 bg-gray-50 rounded border text-sm">
+									<p>
+										TAXII servers can be configured in the server environment
+										using the <code>TAXII_SERVERS</code> environment variable.
+										This should be a JSON array with server configurations.
+									</p>
+									<p className="mt-2">Example configuration:</p>
+									<pre className="p-3 bg-gray-100 rounded mt-2 overflow-x-auto">
+										{`TAXII_SERVERS=[
+  {
+    "name": "MITRE ATT&CK",
+    "url": "https://cti-taxii.mitre.org/taxii/",
+    "version": "2.1",
+    "collection_name": "enterprise-attack",
+    "username": null,
+    "password": null
+  },
+  {
+    "name": "AlienVault OTX",
+    "url": "https://otx.alienvault.com/taxii/",
+    "version": "2.0",
+    "collection_name": "user_AlienVault",
+    "username": "your_email",
+    "password": "your_api_key"
+  }
+]`}
+									</pre>
+								</div>
 							</div>
-						)}
+						</>
+					)}
+				</CardContent>
+			</Card>
 
-						<div className="mt-6 flex justify-end">
-							<button
-								onClick={onClose}
-								className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-							>
-								Close
-							</button>
-						</div>
+			{taxiiStatus &&
+				taxiiStatus.recentRuns &&
+				taxiiStatus.recentRuns.length > 0 && (
+					<Card>
+						<CardHeader>
+							<CardTitle>Recent TAXII Sync Activity</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<Table>
+								<TableHeader>
+									<TableRow>
+										<TableHead>Timestamp</TableHead>
+										<TableHead>Status</TableHead>
+										<TableHead>IOCs Added</TableHead>
+										<TableHead>IOCs Updated</TableHead>
+										<TableHead>Error</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{taxiiStatus.recentRuns.map((run, i) => (
+										<TableRow key={i}>
+											<TableCell>
+												{new Date(run.timestamp).toLocaleString()}
+											</TableCell>
+											<TableCell>
+												<Badge
+													className={
+														run.status === "completed"
+															? "bg-green-100 text-green-800"
+															: "bg-red-100 text-red-800"
+													}
+												>
+													{run.status}
+												</Badge>
+											</TableCell>
+											<TableCell>{run.itemsAdded}</TableCell>
+											<TableCell>{run.itemsUpdated}</TableCell>
+											<TableCell className="text-xs text-red-600">
+												{run.error || "-"}
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						</CardContent>
+					</Card>
+				)}
+		</div>
+	);
+
+	// Render search results
+	const renderSearchResults = () => (
+		<>
+			<Card className="mb-8">
+				<CardHeader>
+					<CardTitle>Search Threats</CardTitle>
+					<CardDescription>
+						Enter an IP address, domain, URL, file hash, or other indicator to
+						search for threat intelligence.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex gap-2">
+						<Input
+							placeholder="Enter search query..."
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							onKeyDown={(e) => e.key === "Enter" && searchThreat()}
+							className="flex-1"
+						/>
+						<Button onClick={searchThreat} disabled={loading}>
+							{loading ? "Searching..." : "Search"}
+							{!loading && <span className="ml-2">🔍</span>}
+						</Button>
 					</div>
+				</CardContent>
+			</Card>
+
+			{error && (
+				<Alert>
+					<AlertTitle>Error</AlertTitle>
+					<AlertDescription>{error}</AlertDescription>
+				</Alert>
+			)}
+
+			{results.length > 0 ? (
+				<Card>
+					<CardHeader>
+						<CardTitle>Search Results</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Indicator</TableHead>
+									<TableHead>Type</TableHead>
+									<TableHead>Threat Score</TableHead>
+									<TableHead>Source</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{results.map((result, index) => (
+									<TableRow key={index} onClick={() => handleIocClick(result)}>
+										<TableCell>{result.indicator || "-"}</TableCell>
+										<TableCell>{result.type || "-"}</TableCell>
+										<TableCell>{result.threatScore || "-"}</TableCell>
+										<TableCell>{result.source || "-"}</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</CardContent>
+					<CardFooter className="text-sm text-gray-500">
+						Showing {results.length} results
+					</CardFooter>
+				</Card>
+			) : (
+				<div className="text-center py-12 text-gray-500">
+					{loading
+						? "Searching for threats..."
+						: "Enter a search query to find threat intelligence data"}
 				</div>
-			</div>
-		);
-	};
+			)}
+		</>
+	);
 
-	// Tool information section
-	const renderToolInfo = () => {
-		return (
-			<div className="bg-white rounded-lg shadow p-6 mb-8">
-				<h2 className="text-2xl font-bold mb-4">
-					Threat Intelligence Platform
-				</h2>
-				<p className="text-gray-700 mb-6">
-					This is a real-time threat intelligence platform designed to keep your
-					organization a step ahead of cyber threats. By continuously
-					collecting, analyzing, and distributing actionable intelligence, it
-					enables security teams to identify, respond to, and even anticipate
-					emerging attacks—before they impact your business.
-				</p>
-
-				<h3 className="text-xl font-semibold mb-3">Key Features</h3>
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-					<div className="border border-gray-200 rounded-lg p-4">
-						<h4 className="text-lg font-medium mb-2">Global Threat Database</h4>
-						<p className="text-gray-600">
-							Continuously updated repository of indicators, malicious domains,
-							threat actors, tactics, and new vulnerabilities, sourced from open
-							and commercial feeds, darknet, and internal honeypots.
-						</p>
-					</div>
-
-					<div className="border border-gray-200 rounded-lg p-4">
-						<h4 className="text-lg font-medium mb-2">Customized Alerts</h4>
-						<p className="text-gray-600">
-							Receive real-time, tailored notifications based on your assets,
-							industry, and risk appetite. Alerts are prioritized by relevance
-							and severity so your team can focus on what matters.
-						</p>
-					</div>
-
-					<div className="border border-gray-200 rounded-lg p-4">
-						<h4 className="text-lg font-medium mb-2">Attribution Analysis</h4>
-						<p className="text-gray-600">
-							Leverage automated and analyst-assisted tools to correlate threat
-							indicators with known adversaries, campaigns, and geopolitical
-							motives, helping you understand the who and why behind attacks.
-						</p>
-					</div>
-
-					<div className="border border-gray-200 rounded-lg p-4">
-						<h4 className="text-lg font-medium mb-2">SIEM Integration</h4>
-						<p className="text-gray-600">
-							Seamlessly integrate with your Security Information and Event
-							Management (SIEM) system, feeding intelligence directly into your
-							existing workflows for correlation, incident response, and
-							automation.
-						</p>
-					</div>
-				</div>
-
-				<h3 className="text-xl font-semibold mb-3">What Sets It Apart?</h3>
-				<ul className="list-disc pl-6 mb-6 space-y-2">
-					<li className="text-gray-700">
-						<span className="font-medium">Automated + Human Curation:</span>{" "}
-						Combines machine-speed analytics with human expert review for
-						high-quality intelligence.
-					</li>
-					<li className="text-gray-700">
-						<span className="font-medium">Multi-Source Ingestion:</span> Ingests
-						data from OSINT, commercial feeds, ISACs, and proprietary honeypots.
-					</li>
-					<li className="text-gray-700">
-						<span className="font-medium">Flexible Delivery:</span> Dashboards,
-						APIs, and automated feeds for various security tools and workflows.
-					</li>
-				</ul>
-
-				<h3 className="text-xl font-semibold mb-3">Sample Workflow</h3>
-				<div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-					<ol className="list-decimal pl-6 space-y-3">
-						<li className="text-gray-700">
-							<span className="font-medium">Collection:</span> Aggregates global
-							threat data 24/7 from multiple sources.
-						</li>
-						<li className="text-gray-700">
-							<span className="font-medium">Analysis:</span> Enriches and
-							correlates IOCs, identifies patterns, and attributes them to
-							threat actors or campaigns.
-						</li>
-						<li className="text-gray-700">
-							<span className="font-medium">Alerting:</span> Delivers
-							high-confidence, actionable alerts to the right teams via email,
-							dashboard, or SIEM integration.
-						</li>
-						<li className="text-gray-700">
-							<span className="font-medium">Response & Reporting:</span> Offers
-							deep-dive analysis and reporting for incident response,
-							compliance, and executive awareness.
-						</li>
-					</ol>
-				</div>
-			</div>
-		);
-	};
-
-	// Fetch specific threat indicator details
-	const fetchThreatIndicator = async (id: string) => {
-		try {
-			const response = await fetch(
-				`https://api.threatintelligence.yourdomain.com/indicators/${id}`,
-				{
-					headers: {
-						Authorization: "Bearer YOUR_API_KEY",
-						"Content-Type": "application/json",
-					},
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error(`API error: ${response.status}`);
-			}
-
-			const data = await response.json();
-			setSelectedIndicator(data);
-		} catch (error) {
-			console.error(`Error fetching indicator ${id}:`, error);
-			// Could add fallback behavior here
-		}
-	};
-
-	// Fetch intelligence reports
-	const fetchIntelligenceReports = async (filters = {}) => {
-		try {
-			const response = await fetch(
-				"https://api.threatintelligence.yourdomain.com/reports",
-				{
-					method: "POST",
-					headers: {
-						Authorization: "Bearer YOUR_API_KEY",
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(filters),
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error(`API error: ${response.status}`);
-			}
-
-			return await response.json();
-		} catch (error) {
-			console.error("Error fetching reports:", error);
-			return [];
-		}
-	};
-
-	// Search for threats
-	const searchThreats = async (query: string) => {
-		if (!query.trim()) return;
-
-		try {
-			const response = await fetch(
-				"https://api.threatintelligence.yourdomain.com/search",
-				{
-					method: "POST",
-					headers: {
-						Authorization: "Bearer YOUR_API_KEY",
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ query, limit: 20 }),
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error(`API error: ${response.status}`);
-			}
-
-			return await response.json();
-		} catch (error) {
-			console.error("Error searching threats:", error);
-			return [];
-		}
-	};
-
-	// Find and replace the handleSearch function with this:
-	const handleSearch = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!searchTerm.trim()) return;
-
-		setLoading(true);
-		try {
-			const results = await searchThreats(searchTerm);
-			// Update UI with search results
-			// This implementation will depend on your UI structure
-			// For example, you might want to set a new state for search results
-			setLoading(false);
-		} catch (error) {
-			console.error("Search failed:", error);
-			setLoading(false);
-		}
-	};
-
-	// Main return
 	return (
-		<div className="max-w-7xl mx-auto px-4 py-8">
-			<div className="mb-6">
-				<div className="flex items-center mb-2">
-					<Link
-						href="/tools"
-						className="text-blue-600 hover:text-blue-800 mr-2"
+		<div className="container mx-auto py-8 px-4 bg-gray-50 dark:bg-gray-900 min-h-screen">
+			<div className="flex justify-between items-center mb-6">
+				<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+					Threat Intelligence Platform
+				</h1>
+				<div className="flex space-x-2">
+					<Button
+						onClick={() => fetchAllIocs()}
+						className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
 					>
-						&larr; Tools Dashboard
-					</Link>
+						Refresh Data
+					</Button>
 				</div>
-				<h1 className="text-3xl font-bold">Threat Intelligence Platform</h1>
-				<p className="text-gray-600 mt-1">
-					Actionable intelligence to defend against emerging cyber threats
-				</p>
 			</div>
 
-			{/* Navigation */}
-			<div className="bg-white rounded-lg shadow mb-6">
-				<div className="flex flex-wrap border-b">
-					<button
-						onClick={() => setActiveSection("dashboard")}
-						className={`px-4 py-3 text-sm font-medium ${
-							activeSection === "dashboard"
-								? "border-b-2 border-blue-600 text-blue-600"
-								: "text-gray-600 hover:text-blue-600"
-						}`}
+			<div className="mb-6 border-b dark:border-gray-700">
+				<div className="flex space-x-1 overflow-x-auto">
+					<Tab
+						active={activeTab === "dashboard"}
+						onClick={() => setActiveTab("dashboard")}
 					>
 						Dashboard
-					</button>
-					<button
-						onClick={() => setActiveSection("information")}
-						className={`px-4 py-3 text-sm font-medium ${
-							activeSection === "information"
-								? "border-b-2 border-blue-600 text-blue-600"
-								: "text-gray-600 hover:text-blue-600"
-						}`}
+					</Tab>
+					<Tab
+						active={activeTab === "explorer"}
+						onClick={() => setActiveTab("explorer")}
 					>
-						About This Tool
-					</button>
+						IOC Explorer
+					</Tab>
+					<Tab
+						active={activeTab === "search"}
+						onClick={() => setActiveTab("search")}
+					>
+						Search
+					</Tab>
+					<Tab
+						active={activeTab === "taxii"}
+						onClick={() => setActiveTab("taxii")}
+					>
+						TAXII Config
+					</Tab>
 				</div>
 			</div>
 
-			{/* Loading state */}
-			{loading && (
-				<div className="flex items-center justify-center h-64">
-					<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
-				</div>
-			)}
-
-			{/* Main content */}
-			{!loading && (
-				<>
-					{activeSection === "dashboard" && renderDashboard()}
-					{activeSection === "information" && renderToolInfo()}
-				</>
-			)}
-
-			{/* Modals */}
-			{selectedIndicator && (
-				<IndicatorDetailsModal
-					indicator={selectedIndicator}
-					onClose={() => setSelectedIndicator(null)}
-				/>
-			)}
-
-			{selectedReport && (
-				<ReportDetailsModal
-					report={selectedReport}
-					onClose={() => setSelectedReport(null)}
-				/>
-			)}
-
-			{/* Log Viewer */}
-			{renderLogViewer()}
+			{activeTab === "dashboard" && renderDashboard()}
+			{activeTab === "explorer" && renderExplorer()}
+			{activeTab === "search" && renderSearchResults()}
+			{activeTab === "taxii" && renderTaxii()}
 		</div>
 	);
 }
