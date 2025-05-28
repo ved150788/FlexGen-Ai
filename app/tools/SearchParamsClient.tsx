@@ -111,12 +111,13 @@ const tools = [
 		beta: true,
 	},
 	{
-		id: "ai-api-fuzzer",
+		id: "api-fuzzer",
 		name: "AI-Powered API Fuzzer",
 		description: "Deep fuzzing tool for REST APIs and GraphQL endpoints",
 		category: "Scanning & Assessment",
-		status: "coming-soon",
+		status: "available",
 		icon: "🧠",
+		beta: true,
 	},
 	{
 		id: "cloud-exposure-analyzer",

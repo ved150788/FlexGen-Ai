@@ -72,7 +72,7 @@ const toolsCategories = [
 			},
 			{
 				name: "AI-Powered API Fuzzer",
-				href: "/tools/coming-soon?tool=AI-Powered API Fuzzer",
+				href: "/tools/api-fuzzer",
 			},
 			{
 				name: "Cloud Exposure Analyzer",
