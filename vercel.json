@@ -3,19 +3,42 @@
 	"buildCommand": "next build",
 	"devCommand": "next dev",
 	"outputDirectory": ".next",
-	"cleanUrls": true,
+	"installCommand": "npm install",
 	"functions": {
-		"api/python/**/*.py": {
-			"runtime": "vercel-python@3.9",
-			"memory": 512,
-			"maxDuration": 10
+		"api/python/*.py": {
+			"runtime": "python3.9"
 		}
 	},
-	"installCommand": "pip install -r requirements.txt && npm install",
+	"builds": [
+		{
+			"src": "next.config.js",
+			"use": "@vercel/next"
+		},
+		{
+			"src": "api/python/*.py",
+			"use": "@vercel/python"
+		}
+	],
 	"routes": [
-		{ "src": "/api/python/(.*)", "dest": "/api/python/$1" },
-		{ "src": "/api/(.*)", "dest": "/api/$1" },
-		{ "handle": "filesystem" },
-		{ "src": "/(.*)", "dest": "/" }
+		{
+			"src": "/api/threat/dashboard",
+			"dest": "/api/python/threat-dashboard.py"
+		},
+		{
+			"src": "/api/threat/iocs",
+			"dest": "/api/python/threat-iocs.py"
+		},
+		{
+			"src": "/api/threat/search",
+			"dest": "/api/python/threat-search.py"
+		},
+		{
+			"src": "/api/threat/taxii-status",
+			"dest": "/api/python/taxii-status.py"
+		},
+		{
+			"src": "/(.*)",
+			"dest": "/$1"
+		}
 	]
 }

@@ -2089,13 +2089,33 @@ export default function Page() {
 
 				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
 					<CardHeader className="border-b dark:border-gray-700">
-						<CardTitle className="text-lg font-bold">IOC Explorer</CardTitle>
-						<CardDescription>
-							Showing {filteredIocs.iocs.length} of {filteredIocs.totalItems}{" "}
-							indicators of compromise (Page {filteredIocs.currentPage} of{" "}
-							{filteredIocs.totalPages}). Click on any row for detailed
-							analysis.
-						</CardDescription>
+						<div className="flex justify-between items-center">
+							<div>
+								<CardTitle className="text-lg font-bold">
+									IOC Explorer
+								</CardTitle>
+								<CardDescription>
+									Showing {filteredIocs.iocs.length} of{" "}
+									{filteredIocs.totalItems} indicators of compromise (Page{" "}
+									{filteredIocs.currentPage} of {filteredIocs.totalPages}).
+									Click on any row for detailed analysis.
+								</CardDescription>
+							</div>
+							<Button
+								onClick={refreshAllData}
+								disabled={loading}
+								className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+							>
+								{loading ? (
+									<>
+										<span className="animate-spin mr-2">⏳</span>
+										Refreshing...
+									</>
+								) : (
+									<>🔄 Refresh IOCs</>
+								)}
+							</Button>
+						</div>
 					</CardHeader>
 					<CardContent className="p-0">
 						<Table>

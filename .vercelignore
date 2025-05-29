@@ -2,3 +2,13 @@
 node_modules
 .git
 .venv
+__pycache__
+*.pyc
+*.pyo
+*.db-journal
+.pytest_cache
+.coverage
+scripts/
+*.log
+.DS_Store
+Thumbs.db
