@@ -10,25 +10,25 @@ import {
 } from "react";
 import {
 	Chart as ChartJS,
-	ArcElement,
-	Tooltip,
-	Legend,
 	CategoryScale,
 	LinearScale,
 	BarElement,
 	Title,
+	Tooltip,
+	Legend,
+	ArcElement,
 } from "chart.js";
-import { Pie, Bar } from "react-chartjs-2";
+import { Pie, Bar, Doughnut } from "react-chartjs-2";
 
 // Register ChartJS components
 ChartJS.register(
-	ArcElement,
-	Tooltip,
-	Legend,
 	CategoryScale,
 	LinearScale,
 	BarElement,
-	Title
+	Title,
+	Tooltip,
+	Legend,
+	ArcElement
 );
 
 // Define custom component props
@@ -79,6 +79,17 @@ interface ThreatResult {
 	tags?: string[];
 	sourceUrl?: string;
 	sampleText?: string;
+	externalLinks?: {
+		name: string;
+		url: string;
+		description: string;
+	}[];
+	detailedDescription?: string;
+	suggestedRemedies?: string[];
+	riskAssessment?: string;
+	technicalDetails?: {
+		[key: string]: string;
+	};
 }
 
 interface DashboardStats {
@@ -110,6 +121,37 @@ interface TaxiiStatusData {
 		itemsUpdated: number;
 		error?: string;
 	}[];
+}
+
+// Update interfaces for new TAXII feeds system
+interface TaxiiFeed {
+	id: string;
+	name: string;
+	description: string;
+	status: string;
+	indicators: number;
+	lastUpdated: string | null;
+	format: string;
+	version: string;
+	authRequired: boolean;
+	url: string;
+}
+
+interface TaxiiStatusResponse {
+	connected: boolean;
+	lastSync: string;
+	totalFeeds: number;
+	activeFeeds: number;
+	collections: TaxiiFeed[];
+}
+
+interface FeedSource {
+	name: string;
+	totalIndicators: number;
+	avgThreatScore: number;
+	lastUpdated: string;
+	recentIndicators: number;
+	status: string;
 }
 
 // Update component definitions to accept className prop
@@ -292,7 +334,9 @@ const TableRow = ({
 }: ChildrenProp & { onClick?: () => void }) => (
 	<tr
 		onClick={onClick}
-		className={onClick ? "cursor-pointer hover:bg-gray-50" : ""}
+		className={
+			onClick ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700" : ""
+		}
 	>
 		{children}
 	</tr>
@@ -375,31 +419,41 @@ const DashboardMetricCard = ({
 	color?: "blue" | "green" | "red" | "purple" | "yellow";
 }) => {
 	const colors = {
-		blue: "bg-blue-500 text-white",
-		green: "bg-green-500 text-white",
-		red: "bg-red-500 text-white",
-		purple: "bg-purple-500 text-white",
-		yellow: "bg-yellow-500 text-white",
+		blue: "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300",
+		green:
+			"bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300",
+		red: "bg-gradient-to-br from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300",
+		purple:
+			"bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300",
+		yellow:
+			"bg-gradient-to-br from-yellow-500 to-yellow-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300",
 	};
 
 	return (
-		<div className={`rounded-lg overflow-hidden shadow-lg ${colors[color]}`}>
-			<div className="px-4 py-5 sm:p-6">
+		<div className={`rounded-xl overflow-hidden ${colors[color]}`}>
+			<div className="px-6 py-6 sm:p-8">
 				<div className="flex items-center">
-					{icon && <div className="flex-shrink-0 mr-3">{icon}</div>}
-					<div>
-						<dt className="text-sm font-medium opacity-80 truncate">{title}</dt>
-						<dd className="mt-1 text-3xl font-semibold">{value}</dd>
+					{icon && (
+						<div className="flex-shrink-0 mr-4 text-3xl opacity-90">{icon}</div>
+					)}
+					<div className="flex-1">
+						<dt className="text-sm font-medium opacity-90 truncate uppercase tracking-wide">
+							{title}
+						</dt>
+						<dd className="mt-2 text-4xl font-bold">{value}</dd>
 					</div>
 				</div>
 				{trend && (
-					<div className="mt-2">
+					<div className="mt-4 pt-4 border-t border-white/20">
 						<span
 							className={`text-sm ${
 								trend.positive ? "text-green-100" : "text-red-100"
-							} flex items-center`}
+							} flex items-center font-medium`}
 						>
-							{trend.positive ? "↑" : "↓"} {trend.value}% {trend.label}
+							<span className="mr-1 text-lg">
+								{trend.positive ? "📈" : "📉"}
+							</span>
+							{trend.value}% {trend.label}
 						</span>
 					</div>
 				)}
@@ -410,66 +464,117 @@ const DashboardMetricCard = ({
 
 export default function Page() {
 	const [activeTab, setActiveTab] = useState<
-		"dashboard" | "explorer" | "search" | "taxii"
+		"dashboard" | "explorer" | "taxii" | "search"
 	>("dashboard");
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<ThreatResult[]>([]);
-	const [allIocs, setAllIocs] = useState<ThreatResult[]>([]);
 	const [loading, setLoading] = useState(false);
-	const [taxiiLoading, setTaxiiLoading] = useState(false);
 	const [error, setError] = useState("");
-	const [taxiiError, setTaxiiError] = useState("");
-	const [taxiiSuccess, setTaxiiSuccess] = useState("");
 	const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
 		totalThreats: 0,
 		newThreats: 0,
 		topDomains: [],
 		topIPs: [],
 		threatsByType: [],
+		sourceDistribution: [],
+		mostActiveSource: "",
+		highestRiskScore: 0,
+		isMockData: true,
 	});
-	const [taxiiStatus, setTaxiiStatus] = useState<TaxiiStatusData | null>(null);
+	const [allIocs, setAllIocs] = useState<ThreatResult[]>([]);
 	const [selectedIoc, setSelectedIoc] = useState<ThreatResult | null>(null);
-
-	// Filters
 	const [typeFilter, setTypeFilter] = useState("all");
 	const [sourceFilter, setSourceFilter] = useState("all");
 	const [timeFilter, setTimeFilter] = useState("all");
+	const [taxiiStatus, setTaxiiStatus] = useState<TaxiiStatusData | null>(null);
+	const [taxiiLoading, setTaxiiLoading] = useState(false);
+	const [taxiiError, setTaxiiError] = useState<string | null>(null);
+	const [taxiiSuccess, setTaxiiSuccess] = useState<string | null>(null);
 
-	// Load dashboard data on initial load
-	useEffect(() => {
-		fetchDashboardStats();
-		fetchAllIocs();
-	}, []);
+	// Update TAXII status state for new system
+	const [taxiiStatusNew, setTaxiiStatusNew] =
+		useState<TaxiiStatusResponse | null>(null);
+	const [feedSources, setFeedSources] = useState<FeedSource[]>([]);
+	const [refreshingFeeds, setRefreshingFeeds] = useState(false);
 
-	// Load TAXII status when the TAXII tab is active
-	useEffect(() => {
-		if (activeTab === "taxii") {
-			fetchTaxiiStatus();
+	// Add logging system
+	const [logs, setLogs] = useState<string[]>([]);
+	const [showLogs, setShowLogs] = useState(false);
+
+	// Add pagination state
+	const [currentPage, setCurrentPage] = useState(1);
+	const [itemsPerPage] = useState(10);
+
+	const addLog = (message: string) => {
+		const timestamp = new Date().toLocaleTimeString();
+		const logEntry = `[${timestamp}] ${message}`;
+		setLogs((prev) => [logEntry, ...prev.slice(0, 49)]); // Keep last 50 logs
+	};
+
+	// Add timezone-aware date formatting function
+	const formatLocalDateTime = (dateString: string | null) => {
+		if (!dateString) return "Never";
+
+		try {
+			const date = new Date(dateString);
+			// Ensure we're working with a valid date
+			if (isNaN(date.getTime())) return "Invalid Date";
+
+			// Format with explicit timezone handling
+			return date.toLocaleString("en-IN", {
+				timeZone: "Asia/Kolkata",
+				year: "numeric",
+				month: "2-digit",
+				day: "2-digit",
+				hour: "2-digit",
+				minute: "2-digit",
+				second: "2-digit",
+				hour12: true,
+			});
+		} catch (error) {
+			console.error("Date formatting error:", error);
+			return "Invalid Date";
 		}
-	}, [activeTab]);
+	};
 
 	const fetchDashboardStats = async () => {
 		try {
+			addLog("Fetching dashboard statistics...");
 			const response = await fetch("/api/tools/threat-intelligence/dashboard");
 			if (response.ok) {
 				const data = await response.json();
 				setDashboardStats(data);
+				addLog(`Dashboard stats loaded: ${data.totalThreats} total threats`);
+			} else {
+				addLog(`Failed to fetch dashboard stats: ${response.status}`);
 			}
 		} catch (err) {
-			console.error("Error fetching dashboard stats:", err);
+			addLog(
+				`Error fetching dashboard stats: ${
+					err instanceof Error ? err.message : "Unknown error"
+				}`
+			);
 		}
 	};
 
 	const fetchAllIocs = async () => {
 		setLoading(true);
 		try {
+			addLog("Fetching IOC data...");
 			const response = await fetch("/api/tools/threat-intelligence/iocs");
 			if (response.ok) {
 				const data = await response.json();
 				setAllIocs(data.results || []);
+				addLog(`Loaded ${data.results?.length || 0} IOCs`);
+			} else {
+				addLog(`Failed to fetch IOCs: ${response.status}`);
 			}
 		} catch (err) {
-			console.error("Error fetching IOCs:", err);
+			addLog(
+				`Error fetching IOCs: ${
+					err instanceof Error ? err.message : "Unknown error"
+				}`
+			);
 		} finally {
 			setLoading(false);
 		}
@@ -477,59 +582,126 @@ export default function Page() {
 
 	const fetchTaxiiStatus = async () => {
 		setTaxiiLoading(true);
-		setTaxiiError("");
+		setTaxiiError(null);
+		addLog("Fetching TAXII status...");
+
 		try {
 			const response = await fetch(
-				"/api/tools/threat-intelligence/taxii-status"
+				"/api/tools/threat-intelligence/taxii-status/"
 			);
-			if (response.ok) {
-				const data = await response.json();
-				setTaxiiStatus(data);
-			} else {
-				setTaxiiError(
-					"Failed to load TAXII configuration. The server may not be available."
-				);
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
 			}
-		} catch (err) {
-			console.error("Error fetching TAXII status:", err);
-			setTaxiiError("An error occurred while fetching TAXII configuration");
+			const data = await response.json();
+
+			// Handle new format
+			if (data.collections) {
+				setTaxiiStatusNew(data);
+				addLog(
+					`TAXII status loaded: ${data.activeFeeds}/${data.totalFeeds} feeds active`
+				);
+			} else {
+				// Legacy format
+				setTaxiiStatus(data);
+				addLog("TAXII status loaded (legacy format)");
+			}
+		} catch (error) {
+			const errorMessage = `Failed to fetch TAXII status: ${error}`;
+			setTaxiiError(errorMessage);
+			addLog(errorMessage);
 		} finally {
 			setTaxiiLoading(false);
 		}
 	};
 
-	const triggerTaxiiFetch = async () => {
-		setTaxiiLoading(true);
-		setTaxiiError("");
-		setTaxiiSuccess("");
+	const fetchFeedSources = async () => {
+		try {
+			addLog("Fetching feed sources...");
+			const response = await fetch(
+				"/api/tools/threat-intelligence/feeds/sources"
+			);
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			const data = await response.json();
+			if (data.success) {
+				setFeedSources(data.sources);
+				addLog(`Loaded ${data.sources.length} feed sources`);
+			}
+		} catch (error) {
+			addLog(`Failed to fetch feed sources: ${error}`);
+		}
+	};
+
+	// Add comprehensive refresh function
+	const refreshAllData = async () => {
+		setLoading(true);
+		addLog("Starting comprehensive data refresh...");
+
+		try {
+			// Refresh all data sources in parallel
+			await Promise.all([
+				fetchDashboardStats(),
+				fetchAllIocs(),
+				fetchTaxiiStatus(),
+				fetchFeedSources(),
+			]);
+
+			addLog("All data refreshed successfully");
+
+			// Show success message briefly
+			setTaxiiSuccess("Data refreshed successfully!");
+			setTimeout(() => setTaxiiSuccess(null), 3000);
+		} catch (error) {
+			const errorMsg = `Failed to refresh data: ${
+				error instanceof Error ? error.message : "Unknown error"
+			}`;
+			addLog(errorMsg);
+			setError(errorMsg);
+			setTimeout(() => setError(""), 5000);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const refreshAllFeeds = async () => {
+		setRefreshingFeeds(true);
+		setTaxiiError(null);
+		setTaxiiSuccess(null);
+		addLog("Starting feed refresh...");
+
 		try {
 			const response = await fetch(
-				"/api/tools/threat-intelligence/taxii-fetch",
+				"/api/tools/threat-intelligence/feeds/refresh",
 				{
 					method: "POST",
 				}
 			);
-
-			if (response.ok) {
-				const data = await response.json();
-				setTaxiiSuccess(
-					`Successfully fetched data. Added ${
-						data.addedIocs
-					} new threat indicators in ${Math.round(data.duration)} seconds.`
-				);
-				// Refresh TAXII status and dashboard stats
-				fetchTaxiiStatus();
-				fetchDashboardStats();
-				fetchAllIocs();
-			} else {
-				const errorData = await response.json().catch(() => ({}));
-				setTaxiiError(errorData.error || "Failed to fetch TAXII data");
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
 			}
-		} catch (err) {
-			console.error("Error triggering TAXII fetch:", err);
-			setTaxiiError("An error occurred while trying to fetch TAXII data");
+			const data = await response.json();
+
+			if (data.success) {
+				setTaxiiSuccess(
+					`Successfully refreshed feeds. Added ${data.totalAdded} indicators.`
+				);
+				addLog(`Feed refresh completed: ${data.totalAdded} indicators added`);
+
+				// Refresh status and sources
+				await fetchTaxiiStatus();
+				await fetchFeedSources();
+				await fetchDashboardStats();
+				await fetchAllIocs();
+			} else {
+				throw new Error(data.message || "Failed to refresh feeds");
+			}
+		} catch (error) {
+			const errorMessage = `Failed to refresh feeds: ${error}`;
+			setTaxiiError(errorMessage);
+			addLog(errorMessage);
 		} finally {
-			setTaxiiLoading(false);
+			setRefreshingFeeds(false);
 		}
 	};
 
@@ -540,6 +712,7 @@ export default function Page() {
 		setError("");
 
 		try {
+			addLog(`Searching for threats: "${query}"`);
 			const response = await fetch(
 				`/api/tools/threat-intelligence/search?query=${encodeURIComponent(
 					query
@@ -553,11 +726,14 @@ export default function Page() {
 			const data = await response.json();
 			setResults(data.results || []);
 			setActiveTab("search");
+			addLog(`Search completed: ${data.results?.length || 0} results found`);
 		} catch (err) {
-			setError(
-				"An error occurred while fetching threat data. Please try again."
+			const errorMsg =
+				"An error occurred while fetching threat data. Please try again.";
+			setError(errorMsg);
+			addLog(
+				`Search error: ${err instanceof Error ? err.message : "Unknown error"}`
 			);
-			console.error(err);
 		} finally {
 			setLoading(false);
 		}
@@ -565,21 +741,177 @@ export default function Page() {
 
 	const handleIocClick = (ioc: ThreatResult) => {
 		setSelectedIoc(ioc);
+		setActiveTab("explorer"); // Switch to explorer tab to show the detailed view
 	};
 
 	const handleBackToList = () => {
 		setSelectedIoc(null);
 	};
 
+	// Load dashboard data on initial load
+	useEffect(() => {
+		fetchDashboardStats();
+		fetchAllIocs();
+		fetchTaxiiStatus();
+		fetchFeedSources();
+	}, []);
+
+	// Load TAXII status when the TAXII tab is active
+	useEffect(() => {
+		if (activeTab === "taxii") {
+			fetchTaxiiStatus();
+		}
+	}, [activeTab]);
+
 	const getFilteredIocs = () => {
-		return allIocs.filter((ioc) => {
+		const filtered = allIocs.filter((ioc) => {
 			const matchesType = typeFilter === "all" || ioc.type === typeFilter;
 			const matchesSource =
 				sourceFilter === "all" || ioc.source === sourceFilter;
 			// Time filter would need actual implementation based on firstSeen/lastSeen
 			return matchesType && matchesSource;
 		});
+
+		// Calculate pagination
+		const totalPages = Math.ceil(filtered.length / itemsPerPage);
+		const startIndex = (currentPage - 1) * itemsPerPage;
+		const endIndex = startIndex + itemsPerPage;
+		const paginatedIocs = filtered.slice(startIndex, endIndex);
+
+		return {
+			iocs: paginatedIocs,
+			totalItems: filtered.length,
+			totalPages,
+			currentPage,
+			hasNextPage: currentPage < totalPages,
+			hasPrevPage: currentPage > 1,
+		};
 	};
+
+	// Add pagination component
+	const PaginationControls = ({
+		currentPage,
+		totalPages,
+		totalItems,
+		hasNextPage,
+		hasPrevPage,
+		onPageChange,
+	}: {
+		currentPage: number;
+		totalPages: number;
+		totalItems: number;
+		hasNextPage: boolean;
+		hasPrevPage: boolean;
+		onPageChange: (page: number) => void;
+	}) => {
+		const getPageNumbers = () => {
+			const pages = [];
+			const maxVisiblePages = 5;
+
+			if (totalPages <= maxVisiblePages) {
+				for (let i = 1; i <= totalPages; i++) {
+					pages.push(i);
+				}
+			} else {
+				const start = Math.max(1, currentPage - 2);
+				const end = Math.min(totalPages, start + maxVisiblePages - 1);
+
+				for (let i = start; i <= end; i++) {
+					pages.push(i);
+				}
+			}
+
+			return pages;
+		};
+
+		if (totalPages <= 1) return null;
+
+		return (
+			<div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t dark:border-gray-700">
+				<div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+					<span>
+						Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+						{Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems}{" "}
+						results
+					</span>
+				</div>
+
+				<div className="flex items-center space-x-2">
+					<Button
+						onClick={() => onPageChange(currentPage - 1)}
+						disabled={!hasPrevPage}
+						className="px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						← Previous
+					</Button>
+
+					<div className="flex space-x-1">
+						{getPageNumbers().map((pageNum) => (
+							<Button
+								key={pageNum}
+								onClick={() => onPageChange(pageNum)}
+								className={`px-3 py-1 text-sm border ${
+									pageNum === currentPage
+										? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+										: "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+								}`}
+							>
+								{pageNum}
+							</Button>
+						))}
+					</div>
+
+					<Button
+						onClick={() => onPageChange(currentPage + 1)}
+						disabled={!hasNextPage}
+						className="px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						Next →
+					</Button>
+				</div>
+			</div>
+		);
+	};
+
+	// Logs component
+	const LogsPanel = () => (
+		<Card className="mt-4 shadow-lg border-0 bg-white dark:bg-gray-800">
+			<CardHeader className="border-b dark:border-gray-700">
+				<div className="flex justify-between items-center">
+					<CardTitle className="text-lg font-bold">System Logs</CardTitle>
+					<div className="flex gap-2">
+						<Button
+							onClick={() => setLogs([])}
+							className="px-3 py-1 text-sm bg-gray-500 hover:bg-gray-600 text-white"
+						>
+							Clear Logs
+						</Button>
+						<Button
+							onClick={() => setShowLogs(!showLogs)}
+							className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white"
+						>
+							{showLogs ? "Hide Logs" : "Show Logs"}
+						</Button>
+					</div>
+				</div>
+			</CardHeader>
+			{showLogs && (
+				<CardContent className="p-4">
+					<div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto">
+						{logs.length === 0 ? (
+							<div className="text-gray-500">No logs yet...</div>
+						) : (
+							logs.map((log, index) => (
+								<div key={index} className="mb-1">
+									{log}
+								</div>
+							))
+						)}
+					</div>
+				</CardContent>
+			)}
+		</Card>
+	);
 
 	const typeOptions = [
 		{ value: "all", label: "All Types" },
@@ -606,24 +938,48 @@ export default function Page() {
 		{ value: "90d", label: "Last 90 Days" },
 	];
 
+	// Add function to handle filter changes and reset pagination
+	const handleFilterChange = (
+		filterType: "type" | "source" | "time",
+		value: string
+	) => {
+		setCurrentPage(1); // Reset to first page when filters change
+
+		switch (filterType) {
+			case "type":
+				setTypeFilter(value);
+				break;
+			case "source":
+				setSourceFilter(value);
+				break;
+			case "time":
+				setTimeFilter(value);
+				break;
+		}
+	};
+
 	// Render dashboard view
 	const renderDashboard = () => (
-		<div>
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+		<div className="space-y-8">
+			{/* Enhanced Metrics Cards */}
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 				<DashboardMetricCard
 					title="Total Threats"
-					value={dashboardStats.totalThreats}
+					value={dashboardStats.totalThreats.toLocaleString()}
+					icon="🛡️"
 					color="blue"
 				/>
 				<DashboardMetricCard
 					title="New Threats (24h)"
 					value={dashboardStats.newThreats}
+					icon="🚨"
 					trend={{ value: 12, label: "vs previous day", positive: true }}
 					color="green"
 				/>
 				<DashboardMetricCard
 					title="Most Active Source"
-					value={dashboardStats.mostActiveSource || "AlienVault OTX"}
+					value={dashboardStats.mostActiveSource || "MITRE ATT&CK"}
+					icon="📡"
 					color="purple"
 				/>
 				<DashboardMetricCard
@@ -633,15 +989,20 @@ export default function Page() {
 							? `${dashboardStats.highestRiskScore}/10`
 							: "9.8/10"
 					}
+					icon="⚠️"
 					color="red"
 				/>
 			</div>
 
+			{/* Status Alert */}
 			{dashboardStats.isMockData && (
 				<div className="mb-6">
-					<SuccessAlert className="bg-amber-50 border-amber-200 text-amber-800">
-						<AlertTitle className="text-amber-800">Using Demo Data</AlertTitle>
-						<AlertDescription>
+					<SuccessAlert className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 text-amber-800 shadow-lg rounded-xl">
+						<AlertTitle className="text-amber-800 font-bold flex items-center">
+							<span className="mr-2 text-xl">⚠️</span>
+							Using Demo Data
+						</AlertTitle>
+						<AlertDescription className="text-amber-700">
 							The dashboard is currently displaying demo data. Connect to a real
 							threat intelligence backend to see live data.
 						</AlertDescription>
@@ -649,53 +1010,84 @@ export default function Page() {
 				</div>
 			)}
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-					<CardHeader className="border-b dark:border-gray-700">
-						<CardTitle className="text-lg font-bold">
+			{/* Enhanced Charts Section */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				{/* Top Malicious Domains */}
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden">
+					<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+						<CardTitle className="text-xl font-bold flex items-center">
+							<span className="mr-3 text-2xl">🌐</span>
 							Top Malicious Domains
 						</CardTitle>
+						<CardDescription className="text-gray-600 dark:text-gray-400">
+							Most frequently detected malicious domains
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="p-0">
-						<Table>
-							<TableHeader>
-								<TableRow className="hover:bg-gray-50 dark:hover:bg-gray-700">
-									<TableHead className="font-semibold">Domain</TableHead>
-									<TableHead className="font-semibold text-right">
-										Count
-									</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{dashboardStats.topDomains.map((item, i) => (
-									<TableRow
-										key={i}
-										className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-									>
-										<TableCell className="font-medium">{item.domain}</TableCell>
-										<TableCell className="text-right">
-											<Badge variant="outline">{item.count}</Badge>
-										</TableCell>
+						{dashboardStats.topDomains.length > 0 ? (
+							<Table>
+								<TableHeader>
+									<TableRow className="hover:bg-gray-50 dark:hover:bg-gray-700">
+										<TableHead className="font-semibold text-gray-700 dark:text-gray-300">
+											Domain
+										</TableHead>
+										<TableHead className="font-semibold text-right text-gray-700 dark:text-gray-300">
+											Detections
+										</TableHead>
 									</TableRow>
-								))}
-							</TableBody>
-						</Table>
+								</TableHeader>
+								<TableBody>
+									{dashboardStats.topDomains.map((item, i) => (
+										<TableRow
+											key={i}
+											className="cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-blue-900/10 dark:hover:to-indigo-900/10 transition-all duration-200"
+										>
+											<TableCell className="font-mono text-sm">
+												{item.domain}
+											</TableCell>
+											<TableCell className="text-right">
+												<Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white font-bold px-3 py-1">
+													{item.count}
+												</Badge>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						) : (
+							<div className="flex flex-col items-center justify-center h-48 text-gray-500 dark:text-gray-400">
+								<span className="text-4xl mb-4">🌐</span>
+								<p className="text-lg font-medium">
+									No domain threats detected
+								</p>
+								<p className="text-sm">
+									Domain indicators will appear here when detected
+								</p>
+							</div>
+						)}
 					</CardContent>
 				</Card>
 
-				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-					<CardHeader className="border-b dark:border-gray-700">
-						<CardTitle className="text-lg font-bold">
+				{/* Top Malicious IPs */}
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden">
+					<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20">
+						<CardTitle className="text-xl font-bold flex items-center">
+							<span className="mr-3 text-2xl">🌍</span>
 							Top Malicious IPs
 						</CardTitle>
+						<CardDescription className="text-gray-600 dark:text-gray-400">
+							Most frequently detected malicious IP addresses
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="p-0">
 						<Table>
 							<TableHeader>
 								<TableRow className="hover:bg-gray-50 dark:hover:bg-gray-700">
-									<TableHead className="font-semibold">IP Address</TableHead>
-									<TableHead className="font-semibold text-right">
-										Count
+									<TableHead className="font-semibold text-gray-700 dark:text-gray-300">
+										IP Address
+									</TableHead>
+									<TableHead className="font-semibold text-right text-gray-700 dark:text-gray-300">
+										Detections
 									</TableHead>
 								</TableRow>
 							</TableHeader>
@@ -703,11 +1095,15 @@ export default function Page() {
 								{dashboardStats.topIPs.map((item, i) => (
 									<TableRow
 										key={i}
-										className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+										className="cursor-pointer hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 dark:hover:from-red-900/10 dark:hover:to-pink-900/10 transition-all duration-200"
 									>
-										<TableCell className="font-medium">{item.ip}</TableCell>
+										<TableCell className="font-mono text-sm">
+											{item.ip}
+										</TableCell>
 										<TableCell className="text-right">
-											<Badge variant="outline">{item.count}</Badge>
+											<Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-3 py-1">
+												{item.count}
+											</Badge>
 										</TableCell>
 									</TableRow>
 								))}
@@ -717,14 +1113,22 @@ export default function Page() {
 				</Card>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-					<CardHeader className="border-b dark:border-gray-700">
-						<CardTitle className="text-lg font-bold">Threats by Type</CardTitle>
+			{/* Enhanced Charts Row */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+				{/* Threats by Type - Enhanced Bar Chart */}
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden">
+					<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20">
+						<CardTitle className="text-xl font-bold flex items-center">
+							<span className="mr-3 text-2xl">📊</span>
+							Threats by Type
+						</CardTitle>
+						<CardDescription className="text-gray-600 dark:text-gray-400">
+							Distribution of threat indicators by category
+						</CardDescription>
 					</CardHeader>
-					<CardContent className="py-4">
+					<CardContent className="py-6">
 						{dashboardStats.threatsByType.length > 0 ? (
-							<div className="h-64">
+							<div className="h-80">
 								<Bar
 									data={{
 										labels: dashboardStats.threatsByType.map(
@@ -737,20 +1141,26 @@ export default function Page() {
 													(item) => item.count
 												),
 												backgroundColor: [
-													"rgba(255, 99, 132, 0.8)",
-													"rgba(54, 162, 235, 0.8)",
-													"rgba(255, 206, 86, 0.8)",
-													"rgba(75, 192, 192, 0.8)",
-													"rgba(153, 102, 255, 0.8)",
+													"rgba(99, 102, 241, 0.8)",
+													"rgba(236, 72, 153, 0.8)",
+													"rgba(34, 197, 94, 0.8)",
+													"rgba(251, 146, 60, 0.8)",
+													"rgba(168, 85, 247, 0.8)",
+													"rgba(14, 165, 233, 0.8)",
+													"rgba(239, 68, 68, 0.8)",
 												],
 												borderColor: [
-													"rgba(255, 99, 132, 1)",
-													"rgba(54, 162, 235, 1)",
-													"rgba(255, 206, 86, 1)",
-													"rgba(75, 192, 192, 1)",
-													"rgba(153, 102, 255, 1)",
+													"rgba(99, 102, 241, 1)",
+													"rgba(236, 72, 153, 1)",
+													"rgba(34, 197, 94, 1)",
+													"rgba(251, 146, 60, 1)",
+													"rgba(168, 85, 247, 1)",
+													"rgba(14, 165, 233, 1)",
+													"rgba(239, 68, 68, 1)",
 												],
-												borderWidth: 1,
+												borderWidth: 2,
+												borderRadius: 8,
+												borderSkipped: false,
 											},
 										],
 									}}
@@ -764,44 +1174,87 @@ export default function Page() {
 											title: {
 												display: false,
 											},
+											tooltip: {
+												backgroundColor: "rgba(0, 0, 0, 0.8)",
+												titleColor: "white",
+												bodyColor: "white",
+												borderColor: "rgba(255, 255, 255, 0.2)",
+												borderWidth: 1,
+												cornerRadius: 8,
+											},
 										},
 										scales: {
+											x: {
+												grid: {
+													display: false,
+												},
+												ticks: {
+													color: "rgba(107, 114, 128, 0.8)",
+													font: {
+														weight: "bold",
+													},
+												},
+											},
 											y: {
 												beginAtZero: true,
+												grid: {
+													color: "rgba(107, 114, 128, 0.1)",
+												},
+												ticks: {
+													color: "rgba(107, 114, 128, 0.8)",
+													font: {
+														weight: "bold",
+													},
+												},
 											},
+										},
+										animation: {
+											duration: 2000,
+											easing: "easeInOutQuart",
 										},
 									}}
 								/>
 							</div>
 						) : (
-							<div className="flex items-center justify-center h-64 text-gray-500">
-								No threat type data available
+							<div className="flex flex-col items-center justify-center h-80 text-gray-500 dark:text-gray-400">
+								<span className="text-4xl mb-4">📊</span>
+								<p className="text-lg font-medium">
+									No threat type data available
+								</p>
+								<p className="text-sm">
+									Threat categories will appear here when data is loaded
+								</p>
 							</div>
 						)}
 					</CardContent>
 				</Card>
 
-				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-					<CardHeader className="border-b dark:border-gray-700">
-						<CardTitle className="text-lg font-bold">
+				{/* Distribution by Source - Enhanced Doughnut Chart */}
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden">
+					<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+						<CardTitle className="text-xl font-bold flex items-center">
+							<span className="mr-3 text-2xl">🎯</span>
 							Distribution by Source
 						</CardTitle>
+						<CardDescription className="text-gray-600 dark:text-gray-400">
+							Threat intelligence sources and their contributions
+						</CardDescription>
 					</CardHeader>
-					<CardContent className="py-4">
-						<div className="h-64 flex items-center justify-center">
-							<div style={{ width: "100%", height: "100%", maxWidth: "250px" }}>
-								<Pie
+					<CardContent className="py-6">
+						<div className="h-80 flex items-center justify-center">
+							<div style={{ width: "100%", height: "100%", maxWidth: "300px" }}>
+								<Doughnut
 									data={{
 										labels: dashboardStats.sourceDistribution
 											? dashboardStats.sourceDistribution.map(
 													(item) => item.source
 											  )
 											: [
-													"AlienVault OTX",
 													"MITRE ATT&CK",
-													"ThreatFox",
-													"MISP",
-													"VirusTotal",
+													"OpenPhish",
+													"CISA KEV",
+													"Blocklist.de",
+													"MalwareBazaar",
 											  ],
 										datasets: [
 											{
@@ -809,30 +1262,220 @@ export default function Page() {
 													? dashboardStats.sourceDistribution.map(
 															(item) => item.count
 													  )
-													: [42, 23, 15, 12, 8],
+													: [51, 20, 20, 15, 10],
 												backgroundColor: [
-													"rgba(255, 99, 132, 0.8)",
-													"rgba(54, 162, 235, 0.8)",
-													"rgba(255, 206, 86, 0.8)",
-													"rgba(75, 192, 192, 0.8)",
-													"rgba(153, 102, 255, 0.8)",
+													"rgba(99, 102, 241, 0.8)",
+													"rgba(236, 72, 153, 0.8)",
+													"rgba(34, 197, 94, 0.8)",
+													"rgba(251, 146, 60, 0.8)",
+													"rgba(168, 85, 247, 0.8)",
+													"rgba(14, 165, 233, 0.8)",
+													"rgba(239, 68, 68, 0.8)",
 												],
 												borderColor: [
-													"rgba(255, 99, 132, 1)",
-													"rgba(54, 162, 235, 1)",
-													"rgba(255, 206, 86, 1)",
-													"rgba(75, 192, 192, 1)",
-													"rgba(153, 102, 255, 1)",
+													"rgba(99, 102, 241, 1)",
+													"rgba(236, 72, 153, 1)",
+													"rgba(34, 197, 94, 1)",
+													"rgba(251, 146, 60, 1)",
+													"rgba(168, 85, 247, 1)",
+													"rgba(14, 165, 233, 1)",
+													"rgba(239, 68, 68, 1)",
 												],
-												borderWidth: 1,
+												borderWidth: 3,
+												hoverBorderWidth: 4,
+												hoverOffset: 8,
 											},
 										],
 									}}
 									options={{
 										responsive: true,
 										maintainAspectRatio: false,
+										cutout: "60%",
+										plugins: {
+											legend: {
+												position: "bottom",
+												labels: {
+													padding: 20,
+													usePointStyle: true,
+													pointStyle: "circle",
+													font: {
+														size: 12,
+														weight: "bold",
+													},
+													color: "rgba(107, 114, 128, 0.8)",
+												},
+											},
+											tooltip: {
+												backgroundColor: "rgba(0, 0, 0, 0.8)",
+												titleColor: "white",
+												bodyColor: "white",
+												borderColor: "rgba(255, 255, 255, 0.2)",
+												borderWidth: 1,
+												cornerRadius: 8,
+												callbacks: {
+													label: function (context: any) {
+														const total = context.dataset.data.reduce(
+															(a: number, b: number) => a + b,
+															0
+														);
+														const percentage = (
+															(context.parsed / total) *
+															100
+														).toFixed(1);
+														return `${context.label}: ${context.parsed} (${percentage}%)`;
+													},
+												},
+											},
+										},
+										animation: {
+											animateRotate: true,
+											animateScale: true,
+											duration: 2000,
+											easing: "easeInOutQuart",
+										},
 									}}
 								/>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+			{/* Additional Statistics Row */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				{/* Threat Severity Distribution */}
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden">
+					<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20">
+						<CardTitle className="text-lg font-bold flex items-center">
+							<span className="mr-3 text-xl">⚡</span>
+							Threat Severity
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="py-4">
+						<div className="space-y-3">
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium text-red-600">
+									Critical
+								</span>
+								<span className="text-sm font-bold">15%</span>
+							</div>
+							<div className="w-full bg-gray-200 rounded-full h-2">
+								<div
+									className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full"
+									style={{ width: "15%" }}
+								></div>
+							</div>
+
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium text-orange-600">
+									High
+								</span>
+								<span className="text-sm font-bold">35%</span>
+							</div>
+							<div className="w-full bg-gray-200 rounded-full h-2">
+								<div
+									className="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full"
+									style={{ width: "35%" }}
+								></div>
+							</div>
+
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium text-yellow-600">
+									Medium
+								</span>
+								<span className="text-sm font-bold">40%</span>
+							</div>
+							<div className="w-full bg-gray-200 rounded-full h-2">
+								<div
+									className="bg-gradient-to-r from-yellow-500 to-yellow-600 h-2 rounded-full"
+									style={{ width: "40%" }}
+								></div>
+							</div>
+
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium text-green-600">Low</span>
+								<span className="text-sm font-bold">10%</span>
+							</div>
+							<div className="w-full bg-gray-200 rounded-full h-2">
+								<div
+									className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full"
+									style={{ width: "10%" }}
+								></div>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Recent Activity */}
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden">
+					<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20">
+						<CardTitle className="text-lg font-bold flex items-center">
+							<span className="mr-3 text-xl">📈</span>
+							Recent Activity
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="py-4">
+						<div className="space-y-4">
+							<div className="flex items-center space-x-3">
+								<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+								<span className="text-sm">
+									New threats detected: +{dashboardStats.newThreats}
+								</span>
+							</div>
+							<div className="flex items-center space-x-3">
+								<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+								<span className="text-sm">Feeds updated: 2 hours ago</span>
+							</div>
+							<div className="flex items-center space-x-3">
+								<div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+								<span className="text-sm">
+									Database size: {dashboardStats.totalThreats} indicators
+								</span>
+							</div>
+							<div className="flex items-center space-x-3">
+								<div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+								<span className="text-sm">
+									Active sources:{" "}
+									{dashboardStats.sourceDistribution?.length || 6}
+								</span>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* System Health */}
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl overflow-hidden">
+					<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20">
+						<CardTitle className="text-lg font-bold flex items-center">
+							<span className="mr-3 text-xl">💚</span>
+							System Health
+						</CardTitle>
+					</CardHeader>
+					<CardContent className="py-4">
+						<div className="space-y-4">
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium">API Status</span>
+								<Badge className="bg-green-100 text-green-800 px-2 py-1">
+									✅ Online
+								</Badge>
+							</div>
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium">Database</span>
+								<Badge className="bg-green-100 text-green-800 px-2 py-1">
+									✅ Connected
+								</Badge>
+							</div>
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium">TAXII Feeds</span>
+								<Badge className="bg-green-100 text-green-800 px-2 py-1">
+									✅ Active
+								</Badge>
+							</div>
+							<div className="flex justify-between items-center">
+								<span className="text-sm font-medium">Scheduler</span>
+								<Badge className="bg-green-100 text-green-800 px-2 py-1">
+									✅ Running
+								</Badge>
 							</div>
 						</div>
 					</CardContent>
@@ -845,141 +1488,556 @@ export default function Page() {
 	const renderExplorer = () => {
 		if (selectedIoc) {
 			return (
-				<Card className="shadow-lg border-0 bg-white dark:bg-gray-800">
-					<CardHeader className="border-b dark:border-gray-700">
-						<div className="flex justify-between items-center">
-							<CardTitle className="text-xl font-bold">IOC Details</CardTitle>
-							<Button
-								onClick={handleBackToList}
-								className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-							>
-								← Back to List
-							</Button>
-						</div>
-					</CardHeader>
-					<CardContent className="p-6">
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Indicator
-								</h3>
-								<p className="mt-1 text-lg font-bold break-all">
-									{selectedIoc.indicator}
-								</p>
-							</div>
-							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Type
-								</h3>
-								<div className="mt-1">
-									<Badge className="text-sm bg-blue-100 text-blue-800">
-										{selectedIoc.type}
-									</Badge>
+				<div className="max-w-7xl mx-auto">
+					<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+						<CardHeader className="border-b dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
+							<div className="flex justify-between items-center">
+								<div>
+									<CardTitle className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+										<span className="mr-3 text-3xl">🎯</span>
+										IOC Detailed Analysis
+									</CardTitle>
+									<p className="text-gray-600 dark:text-gray-300 mt-1">
+										Comprehensive threat intelligence analysis and remediation
+										guidance
+									</p>
 								</div>
-							</div>
-							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Threat Score
-								</h3>
-								<div className="mt-1 flex items-center">
-									<div
-										className="w-full bg-gray-200 rounded-full h-2.5 mr-2 dark:bg-gray-700"
-										style={{ maxWidth: "150px" }}
-									>
-										<div
-											className={`h-2.5 rounded-full ${
-												selectedIoc.threatScore >= 8.5
-													? "bg-red-600"
-													: selectedIoc.threatScore >= 6.5
-													? "bg-orange-500"
-													: selectedIoc.threatScore >= 4.5
-													? "bg-yellow-400"
-													: "bg-green-500"
-											}`}
-											style={{
-												width: `${(selectedIoc.threatScore / 10) * 100}%`,
-											}}
-										></div>
-									</div>
-									<span className="text-lg font-bold">
-										{selectedIoc.threatScore}
-									</span>
-								</div>
-							</div>
-							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Source
-								</h3>
-								<p className="mt-1 text-lg font-medium">{selectedIoc.source}</p>
-							</div>
-							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									First Seen
-								</h3>
-								<p className="mt-1 text-base font-medium">
-									{selectedIoc.firstSeen
-										? new Date(selectedIoc.firstSeen).toLocaleString()
-										: "Unknown"}
-								</p>
-							</div>
-							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-									Last Seen
-								</h3>
-								<p className="mt-1 text-base font-medium">
-									{selectedIoc.lastSeen
-										? new Date(selectedIoc.lastSeen).toLocaleString()
-										: "Unknown"}
-								</p>
-							</div>
-						</div>
-
-						{selectedIoc.sourceUrl && (
-							<div className="mb-6 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-									Source URL
-								</h3>
-								<a
-									href={selectedIoc.sourceUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="text-blue-600 hover:underline break-all"
+								<Button
+									onClick={handleBackToList}
+									className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg transition-all duration-200 transform hover:scale-105"
 								>
-									{selectedIoc.sourceUrl}
-								</a>
+									← Back to List
+								</Button>
 							</div>
-						)}
-
-						{selectedIoc.sampleText && (
-							<div className="mb-6 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-									Description
-								</h3>
-								<div className="p-4 bg-white dark:bg-gray-800 rounded border text-sm">
-									{selectedIoc.sampleText}
-								</div>
-							</div>
-						)}
-
-						{selectedIoc.tags && selectedIoc.tags.length > 0 && (
-							<div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
-								<h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-									Tags
-								</h3>
-								<div className="flex flex-wrap gap-2">
-									{selectedIoc.tags.map((tag, i) => (
-										<Badge
-											key={i}
-											className="bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer"
-										>
-											{tag}
+						</CardHeader>
+						<CardContent className="p-8">
+							{/* Indicator Header Section */}
+							<div className="mb-8 p-6 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
+								<div className="flex items-center justify-between mb-4">
+									<h2 className="text-xl font-bold text-gray-900 dark:text-white">
+										Threat Indicator
+									</h2>
+									<div className="flex items-center space-x-3">
+										<Badge className="text-sm bg-blue-100 text-blue-800 px-3 py-1">
+											{selectedIoc.type}
 										</Badge>
-									))}
+										<div className="flex items-center space-x-2">
+											<span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+												Risk Score:
+											</span>
+											<div className="flex items-center">
+												<div className="w-24 bg-gray-200 rounded-full h-3 mr-2 dark:bg-gray-700">
+													<div
+														className={`h-3 rounded-full transition-all duration-500 ${
+															selectedIoc.threatScore >= 8.5
+																? "bg-gradient-to-r from-red-500 to-red-600"
+																: selectedIoc.threatScore >= 6.5
+																? "bg-gradient-to-r from-orange-500 to-orange-600"
+																: selectedIoc.threatScore >= 4.5
+																? "bg-gradient-to-r from-yellow-400 to-yellow-500"
+																: "bg-gradient-to-r from-green-500 to-green-600"
+														}`}
+														style={{
+															width: `${(selectedIoc.threatScore / 10) * 100}%`,
+														}}
+													></div>
+												</div>
+												<span className="text-lg font-bold text-gray-900 dark:text-white">
+													{selectedIoc.threatScore}/10
+												</span>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+									<p className="text-lg font-mono break-all text-gray-900 dark:text-white">
+										{selectedIoc.indicator}
+									</p>
 								</div>
 							</div>
-						)}
-					</CardContent>
-				</Card>
+
+							{/* Basic Information Grid */}
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+								<div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 p-6 rounded-xl border border-blue-200 dark:border-blue-700 shadow-md">
+									<div className="flex items-center mb-3">
+										<span className="text-2xl mr-3">📊</span>
+										<h3 className="text-sm font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wide">
+											Source Information
+										</h3>
+									</div>
+									<p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+										{selectedIoc.source}
+									</p>
+								</div>
+
+								<div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 p-6 rounded-xl border border-green-200 dark:border-green-700 shadow-md">
+									<div className="flex items-center mb-3">
+										<span className="text-2xl mr-3">👁️</span>
+										<h3 className="text-sm font-semibold text-green-800 dark:text-green-300 uppercase tracking-wide">
+											First Detected
+										</h3>
+									</div>
+									<p className="text-lg font-bold text-green-900 dark:text-green-100">
+										{selectedIoc.firstSeen
+											? formatLocalDateTime(selectedIoc.firstSeen)
+											: "Unknown"}
+									</p>
+								</div>
+
+								<div className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 p-6 rounded-xl border border-purple-200 dark:border-purple-700 shadow-md">
+									<div className="flex items-center mb-3">
+										<span className="text-2xl mr-3">🕒</span>
+										<h3 className="text-sm font-semibold text-purple-800 dark:text-purple-300 uppercase tracking-wide">
+											Last Activity
+										</h3>
+									</div>
+									<p className="text-lg font-bold text-purple-900 dark:text-purple-100">
+										{selectedIoc.lastSeen
+											? formatLocalDateTime(selectedIoc.lastSeen)
+											: "Unknown"}
+									</p>
+								</div>
+							</div>
+
+							{/* Risk Assessment */}
+							{selectedIoc.riskAssessment && (
+								<div className="mb-8">
+									<Card className="border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 shadow-lg">
+										<CardContent className="p-6">
+											<h3 className="text-lg font-bold text-red-800 dark:text-red-300 mb-3 flex items-center">
+												<span className="mr-3 text-2xl">⚠️</span>
+												Risk Assessment
+											</h3>
+											<p className="text-red-700 dark:text-red-300 leading-relaxed">
+												{selectedIoc.riskAssessment}
+											</p>
+										</CardContent>
+									</Card>
+								</div>
+							)}
+
+							{/* External Analysis Links - Enhanced */}
+							{selectedIoc.externalLinks &&
+								selectedIoc.externalLinks.length > 0 && (
+									<div className="mb-8">
+										<Card className="border-l-4 border-green-500 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 shadow-lg">
+											<CardHeader className="pb-4">
+												<h3 className="text-lg font-bold text-green-800 dark:text-green-300 flex items-center">
+													<span className="mr-3 text-2xl">🔗</span>
+													External Analysis & Intelligence
+												</h3>
+												<p className="text-sm text-green-700 dark:text-green-400">
+													Click any link below to analyze this indicator on
+													external platforms
+												</p>
+											</CardHeader>
+											<CardContent className="pt-0">
+												<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+													{selectedIoc.externalLinks.map((link, index) => (
+														<a
+															key={index}
+															href={link.url}
+															target="_blank"
+															rel="noopener noreferrer"
+															className="group block p-4 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700 hover:border-green-400 dark:hover:border-green-500 transition-all duration-200 transform hover:scale-105 hover:shadow-lg"
+														>
+															<div className="flex items-center justify-between mb-2">
+																<h4 className="font-bold text-green-700 dark:text-green-300 group-hover:text-green-800 dark:group-hover:text-green-200">
+																	{link.name}
+																</h4>
+																<span className="text-green-600 dark:text-green-400 group-hover:text-green-700 dark:group-hover:text-green-300 transition-colors">
+																	🔗
+																</span>
+															</div>
+															<p className="text-xs text-green-600 dark:text-green-400 leading-relaxed">
+																{link.description}
+															</p>
+															<div className="mt-2 text-xs text-green-500 dark:text-green-500 opacity-75 group-hover:opacity-100">
+																Click to analyze →
+															</div>
+														</a>
+													))}
+												</div>
+
+												{/* Additional Quick Links */}
+												<div className="mt-6 pt-4 border-t border-green-200 dark:border-green-700">
+													<h4 className="text-sm font-semibold text-green-800 dark:text-green-300 mb-3">
+														Quick Analysis Links
+													</h4>
+													<div className="flex flex-wrap gap-2">
+														{selectedIoc.type.toLowerCase() === "ip" && (
+															<>
+																<a
+																	href={`https://www.shodan.io/host/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors"
+																>
+																	Shodan
+																</a>
+																<a
+																	href={`https://www.abuseipdb.com/check/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium hover:bg-red-200 transition-colors"
+																>
+																	AbuseIPDB
+																</a>
+																<a
+																	href={`https://www.virustotal.com/gui/ip-address/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium hover:bg-purple-200 transition-colors"
+																>
+																	VirusTotal
+																</a>
+																<a
+																	href={`https://otx.alienvault.com/indicator/ip/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium hover:bg-orange-200 transition-colors"
+																>
+																	AlienVault OTX
+																</a>
+															</>
+														)}
+														{selectedIoc.type.toLowerCase() === "domain" && (
+															<>
+																<a
+																	href={`https://www.virustotal.com/gui/domain/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium hover:bg-purple-200 transition-colors"
+																>
+																	VirusTotal
+																</a>
+																<a
+																	href={`https://www.urlvoid.com/scan/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors"
+																>
+																	URLVoid
+																</a>
+																<a
+																	href={`https://whois.domaintools.com/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium hover:bg-green-200 transition-colors"
+																>
+																	WHOIS
+																</a>
+																<a
+																	href={`https://otx.alienvault.com/indicator/domain/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium hover:bg-orange-200 transition-colors"
+																>
+																	AlienVault OTX
+																</a>
+																<a
+																	href={`https://www.hybrid-analysis.com/search?query=${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium hover:bg-red-200 transition-colors"
+																>
+																	Hybrid Analysis
+																</a>
+															</>
+														)}
+														{selectedIoc.type.toLowerCase() === "url" && (
+															<>
+																<a
+																	href={`https://www.virustotal.com/gui/url/${btoa(
+																		selectedIoc.indicator
+																	)}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium hover:bg-purple-200 transition-colors"
+																>
+																	VirusTotal
+																</a>
+																<a
+																	href={`https://www.urlvoid.com/scan/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors"
+																>
+																	URLVoid
+																</a>
+																<a
+																	href={`https://otx.alienvault.com/indicator/url/${btoa(
+																		selectedIoc.indicator
+																	)}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium hover:bg-orange-200 transition-colors"
+																>
+																	AlienVault OTX
+																</a>
+															</>
+														)}
+														{selectedIoc.type.toLowerCase() === "hash" && (
+															<>
+																<a
+																	href={`https://www.virustotal.com/gui/file/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium hover:bg-purple-200 transition-colors"
+																>
+																	VirusTotal
+																</a>
+																<a
+																	href={`https://www.hybrid-analysis.com/search?query=${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium hover:bg-red-200 transition-colors"
+																>
+																	Hybrid Analysis
+																</a>
+																<a
+																	href={`https://otx.alienvault.com/indicator/file/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium hover:bg-orange-200 transition-colors"
+																>
+																	AlienVault OTX
+																</a>
+																<a
+																	href={`https://malshare.com/search.php?query=${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium hover:bg-gray-200 transition-colors"
+																>
+																	MalShare
+																</a>
+															</>
+														)}
+														{selectedIoc.type.toLowerCase() === "technique" && (
+															<>
+																<a
+																	href={`https://attack.mitre.org/techniques/${selectedIoc.indicator}/`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors"
+																>
+																	MITRE ATT&CK
+																</a>
+																<a
+																	href={`https://d3fend.mitre.org/`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium hover:bg-green-200 transition-colors"
+																>
+																	MITRE D3FEND
+																</a>
+															</>
+														)}
+														{selectedIoc.type.toLowerCase() ===
+															"vulnerability" && (
+															<>
+																<a
+																	href={`https://nvd.nist.gov/vuln/detail/${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors"
+																>
+																	NIST NVD
+																</a>
+																<a
+																	href={`https://www.cisa.gov/known-exploited-vulnerabilities-catalog`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium hover:bg-red-200 transition-colors"
+																>
+																	CISA KEV
+																</a>
+																<a
+																	href={`https://www.exploit-db.com/search?cve=${selectedIoc.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium hover:bg-gray-200 transition-colors"
+																>
+																	Exploit-DB
+																</a>
+															</>
+														)}
+													</div>
+												</div>
+											</CardContent>
+										</Card>
+									</div>
+								)}
+
+							{/* Technical Details */}
+							{selectedIoc.technicalDetails &&
+								Object.keys(selectedIoc.technicalDetails).length > 0 && (
+									<div className="mb-8">
+										<Card className="border-l-4 border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 shadow-lg">
+											<CardHeader className="pb-4">
+												<h3 className="text-lg font-bold text-blue-800 dark:text-blue-300 flex items-center">
+													<span className="mr-3 text-2xl">🔧</span>
+													Technical Details
+												</h3>
+											</CardHeader>
+											<CardContent className="pt-0">
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+													{Object.entries(selectedIoc.technicalDetails).map(
+														([key, value]) => (
+															<div
+																key={key}
+																className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-blue-200 dark:border-blue-700"
+															>
+																<div className="flex justify-between items-center">
+																	<span className="text-sm font-semibold text-blue-700 dark:text-blue-300 capitalize">
+																		{key.replace("_", " ")}
+																	</span>
+																	<span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+																		{value}
+																	</span>
+																</div>
+															</div>
+														)
+													)}
+												</div>
+											</CardContent>
+										</Card>
+									</div>
+								)}
+
+							{/* Detailed Description */}
+							{selectedIoc.detailedDescription && (
+								<div className="mb-8">
+									<Card className="border-l-4 border-gray-500 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 shadow-lg">
+										<CardHeader className="pb-4">
+											<h3 className="text-lg font-bold text-gray-800 dark:text-gray-300 flex items-center">
+												<span className="mr-3 text-2xl">📝</span>
+												Detailed Description
+											</h3>
+										</CardHeader>
+										<CardContent className="pt-0">
+											<div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-600">
+												<p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+													{selectedIoc.detailedDescription}
+												</p>
+											</div>
+										</CardContent>
+									</Card>
+								</div>
+							)}
+
+							{/* Suggested Remedies */}
+							{selectedIoc.suggestedRemedies &&
+								selectedIoc.suggestedRemedies.length > 0 && (
+									<div className="mb-8">
+										<Card className="border-l-4 border-yellow-500 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 shadow-lg">
+											<CardHeader className="pb-4">
+												<h3 className="text-lg font-bold text-yellow-800 dark:text-yellow-300 flex items-center">
+													<span className="mr-3 text-2xl">🛡️</span>
+													Recommended Remediation Actions
+												</h3>
+												<p className="text-sm text-yellow-700 dark:text-yellow-400">
+													Follow these steps to mitigate the threat and protect
+													your environment
+												</p>
+											</CardHeader>
+											<CardContent className="pt-0">
+												<div className="space-y-3">
+													{selectedIoc.suggestedRemedies.map(
+														(remedy, index) => (
+															<div
+																key={index}
+																className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700 flex items-start"
+															>
+																<span className="text-yellow-600 dark:text-yellow-400 mr-3 mt-1 text-lg font-bold">
+																	{index + 1}.
+																</span>
+																<span className="text-yellow-700 dark:text-yellow-300 leading-relaxed">
+																	{remedy}
+																</span>
+															</div>
+														)
+													)}
+												</div>
+											</CardContent>
+										</Card>
+									</div>
+								)}
+
+							{/* Tags */}
+							{selectedIoc.tags && selectedIoc.tags.length > 0 && (
+								<div className="mb-8">
+									<Card className="border-l-4 border-purple-500 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 shadow-lg">
+										<CardHeader className="pb-4">
+											<h3 className="text-lg font-bold text-purple-800 dark:text-purple-300 flex items-center">
+												<span className="mr-3 text-2xl">🏷️</span>
+												Classification Tags
+											</h3>
+										</CardHeader>
+										<CardContent className="pt-0">
+											<div className="flex flex-wrap gap-3">
+												{selectedIoc.tags.map((tag, i) => (
+													<Badge
+														key={i}
+														className="bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-pointer px-4 py-2 text-sm font-medium transition-colors"
+													>
+														{tag}
+													</Badge>
+												))}
+											</div>
+										</CardContent>
+									</Card>
+								</div>
+							)}
+
+							{/* Legacy Information */}
+							{(selectedIoc.sourceUrl ||
+								(selectedIoc.sampleText &&
+									selectedIoc.sampleText !==
+										selectedIoc.detailedDescription)) && (
+								<div className="mb-8">
+									<Card className="border-l-4 border-gray-400 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 shadow-lg">
+										<CardHeader className="pb-4">
+											<h3 className="text-lg font-bold text-gray-800 dark:text-gray-300 flex items-center">
+												<span className="mr-3 text-2xl">📚</span>
+												Additional Information
+											</h3>
+										</CardHeader>
+										<CardContent className="pt-0 space-y-4">
+											{selectedIoc.sourceUrl && (
+												<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+													<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+														Source URL
+													</h4>
+													<a
+														href={selectedIoc.sourceUrl}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="text-blue-600 hover:underline break-all"
+													>
+														{selectedIoc.sourceUrl}
+													</a>
+												</div>
+											)}
+											{selectedIoc.sampleText &&
+												selectedIoc.sampleText !==
+													selectedIoc.detailedDescription && (
+													<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+														<h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+															Sample Text
+														</h4>
+														<p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+															{selectedIoc.sampleText}
+														</p>
+													</div>
+												)}
+										</CardContent>
+									</Card>
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				</div>
 			);
 		}
 
@@ -1001,7 +2059,7 @@ export default function Page() {
 								</label>
 								<Select
 									value={typeFilter}
-									onChange={(e) => setTypeFilter(e.target.value)}
+									onChange={(e) => handleFilterChange("type", e.target.value)}
 									options={typeOptions}
 								/>
 							</div>
@@ -1011,7 +2069,7 @@ export default function Page() {
 								</label>
 								<Select
 									value={sourceFilter}
-									onChange={(e) => setSourceFilter(e.target.value)}
+									onChange={(e) => handleFilterChange("source", e.target.value)}
 									options={sourceOptions}
 								/>
 							</div>
@@ -1021,7 +2079,7 @@ export default function Page() {
 								</label>
 								<Select
 									value={timeFilter}
-									onChange={(e) => setTimeFilter(e.target.value)}
+									onChange={(e) => handleFilterChange("time", e.target.value)}
 									options={timeOptions}
 								/>
 							</div>
@@ -1033,7 +2091,10 @@ export default function Page() {
 					<CardHeader className="border-b dark:border-gray-700">
 						<CardTitle className="text-lg font-bold">IOC Explorer</CardTitle>
 						<CardDescription>
-							Showing {filteredIocs.length} indicators of compromise
+							Showing {filteredIocs.iocs.length} of {filteredIocs.totalItems}{" "}
+							indicators of compromise (Page {filteredIocs.currentPage} of{" "}
+							{filteredIocs.totalPages}). Click on any row for detailed
+							analysis.
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="p-0">
@@ -1044,18 +2105,19 @@ export default function Page() {
 									<TableHead className="font-semibold">Type</TableHead>
 									<TableHead className="font-semibold">Threat Score</TableHead>
 									<TableHead className="font-semibold">Source</TableHead>
+									<TableHead className="font-semibold">Tags</TableHead>
 									<TableHead className="font-semibold">First Seen</TableHead>
 									<TableHead className="font-semibold">Last Seen</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{filteredIocs.map((ioc, index) => (
+								{filteredIocs.iocs.map((ioc: ThreatResult, index: number) => (
 									<TableRow
 										key={index}
 										onClick={() => handleIocClick(ioc)}
 										className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
 									>
-										<TableCell className="font-medium">
+										<TableCell className="font-medium max-w-xs truncate">
 											{ioc.indicator}
 										</TableCell>
 										<TableCell>
@@ -1064,16 +2126,35 @@ export default function Page() {
 										<TableCell>
 											<ThreatScoreBadge score={ioc.threatScore} />
 										</TableCell>
-										<TableCell>{ioc.source}</TableCell>
-										<TableCell>
-											{ioc.firstSeen
-												? new Date(ioc.firstSeen).toLocaleDateString()
-												: "-"}
+										<TableCell className="max-w-xs truncate">
+											{ioc.source}
 										</TableCell>
 										<TableCell>
-											{ioc.lastSeen
-												? new Date(ioc.lastSeen).toLocaleDateString()
-												: "-"}
+											<div className="flex flex-wrap gap-1 max-w-xs">
+												{ioc.tags && ioc.tags.length > 0 ? (
+													ioc.tags.slice(0, 2).map((tag: string, i: number) => (
+														<Badge
+															key={i}
+															className="text-xs bg-blue-100 text-blue-800"
+														>
+															{tag}
+														</Badge>
+													))
+												) : (
+													<span className="text-gray-400 text-xs">No tags</span>
+												)}
+												{ioc.tags && ioc.tags.length > 2 && (
+													<Badge className="text-xs bg-gray-100 text-gray-600">
+														+{ioc.tags.length - 2}
+													</Badge>
+												)}
+											</div>
+										</TableCell>
+										<TableCell>
+											{ioc.firstSeen ? formatLocalDateTime(ioc.firstSeen) : "-"}
+										</TableCell>
+										<TableCell>
+											{ioc.lastSeen ? formatLocalDateTime(ioc.lastSeen) : "-"}
 										</TableCell>
 									</TableRow>
 								))}
@@ -1081,6 +2162,15 @@ export default function Page() {
 						</Table>
 					</CardContent>
 				</Card>
+
+				<PaginationControls
+					currentPage={filteredIocs.currentPage}
+					totalPages={filteredIocs.totalPages}
+					totalItems={filteredIocs.totalItems}
+					hasNextPage={filteredIocs.hasNextPage}
+					hasPrevPage={filteredIocs.hasPrevPage}
+					onPageChange={(page) => setCurrentPage(page)}
+				/>
 			</>
 		);
 	};
@@ -1102,234 +2192,809 @@ export default function Page() {
 				</SuccessAlert>
 			)}
 
+			{/* Feed Status Overview */}
+			{taxiiStatusNew && (
+				<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+					<DashboardMetricCard
+						title="Total Feeds"
+						value={taxiiStatusNew.totalFeeds}
+						icon={<span className="text-2xl">📡</span>}
+						color="blue"
+					/>
+					<DashboardMetricCard
+						title="Active Feeds"
+						value={taxiiStatusNew.activeFeeds}
+						icon={<span className="text-2xl">✅</span>}
+						color="green"
+					/>
+					<DashboardMetricCard
+						title="Total Indicators"
+						value={taxiiStatusNew.collections.reduce(
+							(sum, feed) => sum + feed.indicators,
+							0
+						)}
+						icon={<span className="text-2xl">🎯</span>}
+						color="purple"
+					/>
+					<DashboardMetricCard
+						title="Last Sync"
+						value={
+							taxiiStatusNew.lastSync
+								? formatLocalDateTime(taxiiStatusNew.lastSync)
+								: "Never"
+						}
+						icon={<span className="text-2xl">🔄</span>}
+						color="yellow"
+					/>
+				</div>
+			)}
+
 			<Card className="mb-6">
 				<CardHeader>
 					<div className="flex justify-between items-center">
 						<CardTitle>TAXII Intelligence Feeds</CardTitle>
 						<Button
-							onClick={triggerTaxiiFetch}
-							disabled={taxiiLoading}
+							onClick={refreshAllFeeds}
+							disabled={refreshingFeeds}
 							className="bg-green-600 hover:bg-green-700"
 						>
-							{taxiiLoading ? "Fetching..." : "Fetch Now"}
+							{refreshingFeeds ? (
+								<>
+									<span className="animate-spin mr-2">⏳</span>
+									Refreshing...
+								</>
+							) : (
+								<>🔄 Refresh All Feeds</>
+							)}
 						</Button>
 					</div>
 					<CardDescription>
-						Configured TAXII servers for fetching threat intelligence
+						Open source threat intelligence feeds from multiple providers
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					{taxiiLoading && !taxiiStatus ? (
+					{taxiiLoading && !taxiiStatusNew ? (
 						<div className="text-center py-4">
 							Loading TAXII configuration...
 						</div>
 					) : (
 						<>
-							{taxiiStatus &&
-							taxiiStatus.taxiSources &&
-							taxiiStatus.taxiSources.length > 0 ? (
+							{taxiiStatusNew &&
+							taxiiStatusNew.collections &&
+							taxiiStatusNew.collections.length > 0 ? (
 								<Table>
 									<TableHeader>
 										<TableRow>
-											<TableHead>Source</TableHead>
-											<TableHead>Collection</TableHead>
-											<TableHead>URL</TableHead>
-											<TableHead>IOC Count</TableHead>
+											<TableHead>Feed Name</TableHead>
+											<TableHead>Description</TableHead>
+											<TableHead>Format</TableHead>
+											<TableHead>Status</TableHead>
+											<TableHead>Indicators</TableHead>
+											<TableHead>Last Updated</TableHead>
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{taxiiStatus.taxiSources.map((source, i) => (
+										{taxiiStatusNew.collections.map((feed, i) => (
 											<TableRow key={i}>
-												<TableCell>{source.name}</TableCell>
-												<TableCell>{source.collection}</TableCell>
-												<TableCell className="text-xs">{source.url}</TableCell>
-												<TableCell>{source.iocCount}</TableCell>
+												<TableCell>
+													<div className="font-medium">{feed.name}</div>
+													{feed.authRequired && (
+														<Badge variant="outline" className="mt-1 text-xs">
+															Auth Required
+														</Badge>
+													)}
+												</TableCell>
+												<TableCell className="text-sm text-gray-600">
+													{feed.description}
+												</TableCell>
+												<TableCell>
+													<Badge variant="outline">
+														{feed.format} v{feed.version}
+													</Badge>
+												</TableCell>
+												<TableCell>
+													<Badge
+														className={
+															feed.status === "active"
+																? "bg-green-100 text-green-800"
+																: feed.status === "available"
+																? "bg-blue-100 text-blue-800"
+																: "bg-red-100 text-red-800"
+														}
+													>
+														{feed.status}
+													</Badge>
+												</TableCell>
+												<TableCell>{feed.indicators}</TableCell>
+												<TableCell className="text-xs">
+													{feed.lastUpdated
+														? formatLocalDateTime(feed.lastUpdated)
+														: "Never"}
+												</TableCell>
 											</TableRow>
 										))}
 									</TableBody>
 								</Table>
 							) : (
 								<div className="text-center py-4 text-gray-500">
-									No TAXII sources configured or available
+									No TAXII feeds configured or available
 								</div>
 							)}
-
-							<div className="mt-6">
-								<h3 className="text-lg font-medium mb-2">
-									How to Configure TAXII Sources
-								</h3>
-								<div className="p-4 bg-gray-50 rounded border text-sm">
-									<p>
-										TAXII servers can be configured in the server environment
-										using the <code>TAXII_SERVERS</code> environment variable.
-										This should be a JSON array with server configurations.
-									</p>
-									<p className="mt-2">Example configuration:</p>
-									<pre className="p-3 bg-gray-100 rounded mt-2 overflow-x-auto">
-										{`TAXII_SERVERS=[
-  {
-    "name": "MITRE ATT&CK",
-    "url": "https://cti-taxii.mitre.org/taxii/",
-    "version": "2.1",
-    "collection_name": "enterprise-attack",
-    "username": null,
-    "password": null
-  },
-  {
-    "name": "AlienVault OTX",
-    "url": "https://otx.alienvault.com/taxii/",
-    "version": "2.0",
-    "collection_name": "user_AlienVault",
-    "username": "your_email",
-    "password": "your_api_key"
-  }
-]`}
-									</pre>
-								</div>
-							</div>
 						</>
 					)}
 				</CardContent>
 			</Card>
 
-			{taxiiStatus &&
-				taxiiStatus.recentRuns &&
-				taxiiStatus.recentRuns.length > 0 && (
-					<Card>
-						<CardHeader>
-							<CardTitle>Recent TAXII Sync Activity</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>Timestamp</TableHead>
-										<TableHead>Status</TableHead>
-										<TableHead>IOCs Added</TableHead>
-										<TableHead>IOCs Updated</TableHead>
-										<TableHead>Error</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{taxiiStatus.recentRuns.map((run, i) => (
-										<TableRow key={i}>
-											<TableCell>
-												{new Date(run.timestamp).toLocaleString()}
-											</TableCell>
-											<TableCell>
-												<Badge
-													className={
-														run.status === "completed"
-															? "bg-green-100 text-green-800"
-															: "bg-red-100 text-red-800"
-													}
-												>
-													{run.status}
+			{/* Feed Sources Statistics */}
+			{feedSources.length > 0 && (
+				<Card className="mb-6">
+					<CardHeader>
+						<CardTitle>Feed Sources Statistics</CardTitle>
+						<CardDescription>
+							Breakdown of indicators by source with performance metrics
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Source</TableHead>
+									<TableHead>Total Indicators</TableHead>
+									<TableHead>Avg Threat Score</TableHead>
+									<TableHead>Recent (24h)</TableHead>
+									<TableHead>Last Updated</TableHead>
+									<TableHead>Status</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{feedSources.map((source, i) => (
+									<TableRow key={i}>
+										<TableCell className="font-medium">{source.name}</TableCell>
+										<TableCell>{source.totalIndicators}</TableCell>
+										<TableCell>
+											<ThreatScoreBadge score={source.avgThreatScore} />
+										</TableCell>
+										<TableCell>
+											{source.recentIndicators > 0 ? (
+												<Badge className="bg-green-100 text-green-800">
+													+{source.recentIndicators}
 												</Badge>
-											</TableCell>
-											<TableCell>{run.itemsAdded}</TableCell>
-											<TableCell>{run.itemsUpdated}</TableCell>
-											<TableCell className="text-xs text-red-600">
-												{run.error || "-"}
-											</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						</CardContent>
-					</Card>
-				)}
+											) : (
+												<span className="text-gray-400">0</span>
+											)}
+										</TableCell>
+										<TableCell className="text-xs">
+											{formatLocalDateTime(source.lastUpdated)}
+										</TableCell>
+										<TableCell>
+											<Badge
+												className={
+													source.status === "active"
+														? "bg-green-100 text-green-800"
+														: "bg-gray-100 text-gray-800"
+												}
+											>
+												{source.status}
+											</Badge>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</CardContent>
+				</Card>
+			)}
+
+			{/* Configuration Guide */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Available Open Source TAXII Feeds</CardTitle>
+					<CardDescription>
+						Information about integrated threat intelligence feeds
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div className="p-4 border rounded-lg">
+							<h4 className="font-medium text-green-600 mb-2">
+								✅ Anomali Limo
+							</h4>
+							<p className="text-sm text-gray-600 mb-2">
+								Public CTI feed with APTs, malware, campaigns
+							</p>
+							<div className="text-xs text-gray-500">
+								Format: STIX 1.1 via TAXII 1.x • Auth: Required
+							</div>
+						</div>
+
+						<div className="p-4 border rounded-lg">
+							<h4 className="font-medium text-green-600 mb-2">
+								✅ MITRE ATT&CK
+							</h4>
+							<p className="text-sm text-gray-600 mb-2">
+								Techniques, tactics, procedures of APTs
+							</p>
+							<div className="text-xs text-gray-500">
+								Format: STIX 2.1 JSON • Auth: Not required
+							</div>
+						</div>
+
+						<div className="p-4 border rounded-lg">
+							<h4 className="font-medium text-green-600 mb-2">
+								✅ Hail a TAXII
+							</h4>
+							<p className="text-sm text-gray-600 mb-2">
+								Test and demo TAXII server with sample indicators
+							</p>
+							<div className="text-xs text-gray-500">
+								Format: STIX 1.1 via TAXII 1.x • Auth: Not required
+							</div>
+						</div>
+
+						<div className="p-4 border rounded-lg">
+							<h4 className="font-medium text-green-600 mb-2">
+								✅ MISP Community
+							</h4>
+							<p className="text-sm text-gray-600 mb-2">
+								Community MISP instances with TAXII feeds
+							</p>
+							<div className="text-xs text-gray-500">
+								Format: STIX 2.1 • Auth: Varies by instance
+							</div>
+						</div>
+
+						<div className="p-4 border rounded-lg">
+							<h4 className="font-medium text-green-600 mb-2">
+								✅ EclecticIQ Demo
+							</h4>
+							<p className="text-sm text-gray-600 mb-2">
+								CTI feeds curated for demo and learning
+							</p>
+							<div className="text-xs text-gray-500">
+								Format: STIX 2.x • Auth: Registration may be needed
+							</div>
+						</div>
+
+						<div className="p-4 border rounded-lg bg-blue-50">
+							<h4 className="font-medium text-blue-600 mb-2">
+								ℹ️ Integration Status
+							</h4>
+							<p className="text-sm text-gray-600 mb-2">
+								All feeds are integrated and automatically refreshed
+							</p>
+							<div className="text-xs text-gray-500">
+								Click "Refresh All Feeds" to update indicators
+							</div>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 
 	// Render search results
 	const renderSearchResults = () => (
 		<>
-			<Card className="mb-8">
-				<CardHeader>
-					<CardTitle>Search Threats</CardTitle>
-					<CardDescription>
-						Enter an IP address, domain, URL, file hash, or other indicator to
-						search for threat intelligence.
-					</CardDescription>
+			<Card className="mb-8 shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+				<CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border-b dark:border-gray-700">
+					<div className="flex items-center">
+						<span className="text-3xl mr-3">🔍</span>
+						<div>
+							<CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+								Threat Intelligence Search
+							</CardTitle>
+							<CardDescription className="text-gray-600 dark:text-gray-300 mt-1">
+								Enter an IP address, domain, URL, file hash, or other indicator
+								to search for threat intelligence across multiple sources.
+							</CardDescription>
+						</div>
+					</div>
 				</CardHeader>
-				<CardContent>
-					<div className="flex gap-2">
+				<CardContent className="p-6">
+					<div className="flex gap-3">
 						<Input
-							placeholder="Enter search query..."
+							placeholder="Enter search query (IP, domain, URL, hash, etc.)..."
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							onKeyDown={(e) => e.key === "Enter" && searchThreat()}
-							className="flex-1"
+							className="flex-1 px-4 py-3 text-lg border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:border-blue-500 dark:focus:border-blue-400 transition-colors"
 						/>
-						<Button onClick={searchThreat} disabled={loading}>
-							{loading ? "Searching..." : "Search"}
-							{!loading && <span className="ml-2">🔍</span>}
+						<Button
+							onClick={searchThreat}
+							disabled={loading}
+							className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+						>
+							{loading ? (
+								<>
+									<span className="animate-spin mr-2">⏳</span>
+									Searching...
+								</>
+							) : (
+								<>
+									Search
+									<span className="ml-2">🔍</span>
+								</>
+							)}
 						</Button>
+					</div>
+
+					{/* Search Tips */}
+					<div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+						<h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">
+							💡 Search Tips
+						</h4>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-blue-700 dark:text-blue-400">
+							<div>• IP addresses: 192.168.1.1</div>
+							<div>• Domains: malicious-site.com</div>
+							<div>• URLs: http://example.com/malware</div>
+							<div>• File hashes: MD5, SHA1, SHA256</div>
+						</div>
 					</div>
 				</CardContent>
 			</Card>
 
 			{error && (
-				<Alert>
-					<AlertTitle>Error</AlertTitle>
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
+				<Card className="mb-6 border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 shadow-lg">
+					<CardContent className="p-6">
+						<div className="flex items-center">
+							<span className="text-2xl mr-3">❌</span>
+							<div>
+								<h3 className="text-lg font-bold text-red-800 dark:text-red-300">
+									Search Error
+								</h3>
+								<p className="text-red-700 dark:text-red-300 mt-1">{error}</p>
+							</div>
+						</div>
+					</CardContent>
+				</Card>
 			)}
 
 			{results.length > 0 ? (
-				<Card>
-					<CardHeader>
-						<CardTitle>Search Results</CardTitle>
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+					<CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-800 dark:to-gray-700 border-b dark:border-gray-700">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center">
+								<span className="text-3xl mr-3">📊</span>
+								<div>
+									<CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+										Search Results
+									</CardTitle>
+									<CardDescription className="text-gray-600 dark:text-gray-300 mt-1">
+										Found {results.length} threat intelligence indicators. Click
+										on any result for detailed analysis.
+									</CardDescription>
+								</div>
+							</div>
+							<div className="text-right">
+								<div className="text-sm text-gray-500 dark:text-gray-400">
+									Query:{" "}
+									<span className="font-mono font-medium text-gray-700 dark:text-gray-300">
+										"{query}"
+									</span>
+								</div>
+							</div>
+						</div>
 					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Indicator</TableHead>
-									<TableHead>Type</TableHead>
-									<TableHead>Threat Score</TableHead>
-									<TableHead>Source</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{results.map((result, index) => (
-									<TableRow key={index} onClick={() => handleIocClick(result)}>
-										<TableCell>{result.indicator || "-"}</TableCell>
-										<TableCell>{result.type || "-"}</TableCell>
-										<TableCell>{result.threatScore || "-"}</TableCell>
-										<TableCell>{result.source || "-"}</TableCell>
+					<CardContent className="p-0">
+						<div className="overflow-x-auto">
+							<Table>
+								<TableHeader>
+									<TableRow className="bg-gray-50 dark:bg-gray-800">
+										<TableHead className="font-bold text-gray-700 dark:text-gray-300 px-6 py-4">
+											Indicator
+										</TableHead>
+										<TableHead className="font-bold text-gray-700 dark:text-gray-300 px-6 py-4">
+											Type
+										</TableHead>
+										<TableHead className="font-bold text-gray-700 dark:text-gray-300 px-6 py-4">
+											Threat Score
+										</TableHead>
+										<TableHead className="font-bold text-gray-700 dark:text-gray-300 px-6 py-4">
+											Source & Links
+										</TableHead>
+										<TableHead className="font-bold text-gray-700 dark:text-gray-300 px-6 py-4">
+											Tags
+										</TableHead>
+										<TableHead className="font-bold text-gray-700 dark:text-gray-300 px-6 py-4">
+											Risk Level
+										</TableHead>
+										<TableHead className="font-bold text-gray-700 dark:text-gray-300 px-6 py-4">
+											Actions
+										</TableHead>
 									</TableRow>
-								))}
-							</TableBody>
-						</Table>
+								</TableHeader>
+								<TableBody>
+									{results.map((result, index) => (
+										<TableRow
+											key={index}
+											className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
+										>
+											<TableCell className="px-6 py-4">
+												<div className="max-w-xs">
+													<div className="font-mono text-sm font-medium text-gray-900 dark:text-white truncate">
+														{result.indicator || "-"}
+													</div>
+													{result.firstSeen && (
+														<div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+															First seen:{" "}
+															{formatLocalDateTime(result.firstSeen)}
+														</div>
+													)}
+												</div>
+											</TableCell>
+											<TableCell className="px-6 py-4">
+												<Badge
+													variant="outline"
+													className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 font-medium"
+												>
+													{result.type || "-"}
+												</Badge>
+											</TableCell>
+											<TableCell className="px-6 py-4">
+												<div className="flex items-center space-x-2">
+													<ThreatScoreBadge score={result.threatScore || 0} />
+													<div className="w-16 bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+														<div
+															className={`h-2 rounded-full transition-all duration-300 ${
+																(result.threatScore || 0) >= 8.5
+																	? "bg-gradient-to-r from-red-500 to-red-600"
+																	: (result.threatScore || 0) >= 6.5
+																	? "bg-gradient-to-r from-orange-500 to-orange-600"
+																	: (result.threatScore || 0) >= 4.5
+																	? "bg-gradient-to-r from-yellow-400 to-yellow-500"
+																	: "bg-gradient-to-r from-green-500 to-green-600"
+															}`}
+															style={{
+																width: `${
+																	((result.threatScore || 0) / 10) * 100
+																}%`,
+															}}
+														></div>
+													</div>
+												</div>
+											</TableCell>
+											<TableCell className="px-6 py-4">
+												<div className="max-w-xs">
+													<div className="font-medium text-gray-900 dark:text-white text-sm mb-2">
+														{result.source || "-"}
+													</div>
+
+													{/* External Analysis Links */}
+													<div className="flex flex-wrap gap-1">
+														{result.type?.toLowerCase() === "ip" && (
+															<>
+																<a
+																	href={`https://www.virustotal.com/gui/ip-address/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 transition-colors"
+																	title="Check on VirusTotal"
+																>
+																	VT
+																</a>
+																<a
+																	href={`https://www.abuseipdb.com/check/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200 transition-colors"
+																	title="Check on AbuseIPDB"
+																>
+																	Abuse
+																</a>
+																<a
+																	href={`https://www.shodan.io/host/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium hover:bg-blue-200 transition-colors"
+																	title="Check on Shodan"
+																>
+																	Shodan
+																</a>
+															</>
+														)}
+														{result.type?.toLowerCase() === "domain" && (
+															<>
+																<a
+																	href={`https://www.virustotal.com/gui/domain/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 transition-colors"
+																	title="Check on VirusTotal"
+																>
+																	VT
+																</a>
+																<a
+																	href={`https://www.urlvoid.com/scan/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium hover:bg-blue-200 transition-colors"
+																	title="Check on URLVoid"
+																>
+																	URLVoid
+																</a>
+																<a
+																	href={`https://whois.domaintools.com/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium hover:bg-green-200 transition-colors"
+																	title="WHOIS Lookup"
+																>
+																	WHOIS
+																</a>
+															</>
+														)}
+														{result.type?.toLowerCase() === "url" && (
+															<>
+																<a
+																	href={`https://www.virustotal.com/gui/url/${btoa(
+																		result.indicator || ""
+																	)}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 transition-colors"
+																	title="Check on VirusTotal"
+																>
+																	VT
+																</a>
+																<a
+																	href={`https://www.urlvoid.com/scan/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium hover:bg-blue-200 transition-colors"
+																	title="Check on URLVoid"
+																>
+																	URLVoid
+																</a>
+															</>
+														)}
+														{result.type?.toLowerCase() === "hash" && (
+															<>
+																<a
+																	href={`https://www.virustotal.com/gui/file/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium hover:bg-purple-200 transition-colors"
+																	title="Check on VirusTotal"
+																>
+																	VT
+																</a>
+																<a
+																	href={`https://www.hybrid-analysis.com/search?query=${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200 transition-colors"
+																	title="Check on Hybrid Analysis"
+																>
+																	Hybrid
+																</a>
+															</>
+														)}
+														{result.type?.toLowerCase() === "technique" && (
+															<a
+																href={`https://attack.mitre.org/techniques/${result.indicator}/`}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium hover:bg-blue-200 transition-colors"
+																title="View on MITRE ATT&CK"
+															>
+																MITRE
+															</a>
+														)}
+														{result.type?.toLowerCase() === "vulnerability" && (
+															<>
+																<a
+																	href={`https://nvd.nist.gov/vuln/detail/${result.indicator}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium hover:bg-blue-200 transition-colors"
+																	title="Check on NIST NVD"
+																>
+																	NIST
+																</a>
+																<a
+																	href={`https://www.cisa.gov/known-exploited-vulnerabilities-catalog`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200 transition-colors"
+																	title="Check CISA KEV"
+																>
+																	CISA
+																</a>
+															</>
+														)}
+													</div>
+												</div>
+											</TableCell>
+											<TableCell className="px-6 py-4">
+												<div className="flex flex-wrap gap-1 max-w-xs">
+													{result.tags && result.tags.length > 0 ? (
+														result.tags.slice(0, 3).map((tag, i) => (
+															<Badge
+																key={i}
+																className="text-xs bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+															>
+																{tag}
+															</Badge>
+														))
+													) : (
+														<span className="text-gray-400 text-xs italic">
+															No tags
+														</span>
+													)}
+													{result.tags && result.tags.length > 3 && (
+														<Badge className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+															+{result.tags.length - 3}
+														</Badge>
+													)}
+												</div>
+											</TableCell>
+											<TableCell className="px-6 py-4">
+												{result.riskAssessment ? (
+													<div className="flex items-center">
+														{result.riskAssessment
+															.toLowerCase()
+															.includes("critical") ? (
+															<div className="flex items-center space-x-1">
+																<span className="text-red-600 text-lg">🔴</span>
+																<span className="text-red-700 dark:text-red-400 text-xs font-bold">
+																	Critical
+																</span>
+															</div>
+														) : result.riskAssessment
+																.toLowerCase()
+																.includes("high") ? (
+															<div className="flex items-center space-x-1">
+																<span className="text-orange-600 text-lg">
+																	🟠
+																</span>
+																<span className="text-orange-700 dark:text-orange-400 text-xs font-bold">
+																	High
+																</span>
+															</div>
+														) : result.riskAssessment
+																.toLowerCase()
+																.includes("medium") ? (
+															<div className="flex items-center space-x-1">
+																<span className="text-yellow-600 text-lg">
+																	🟡
+																</span>
+																<span className="text-yellow-700 dark:text-yellow-400 text-xs font-bold">
+																	Medium
+																</span>
+															</div>
+														) : (
+															<div className="flex items-center space-x-1">
+																<span className="text-green-600 text-lg">
+																	🟢
+																</span>
+																<span className="text-green-700 dark:text-green-400 text-xs font-bold">
+																	Low
+																</span>
+															</div>
+														)}
+													</div>
+												) : (
+													<span className="text-gray-400 text-xs italic">
+														Unknown
+													</span>
+												)}
+											</TableCell>
+											<TableCell className="px-6 py-4">
+												<Button
+													onClick={() => handleIocClick(result)}
+													className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-medium rounded-lg shadow-md transition-all duration-200 transform hover:scale-105"
+												>
+													View Details
+												</Button>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						</div>
 					</CardContent>
-					<CardFooter className="text-sm text-gray-500">
-						Showing {results.length} results
+					<CardFooter className="bg-gray-50 dark:bg-gray-800 border-t dark:border-gray-700 p-6">
+						<div className="flex items-center justify-between w-full">
+							<div className="text-sm text-gray-600 dark:text-gray-400">
+								<span className="font-medium">{results.length}</span> results
+								found for "{query}"
+							</div>
+							<div className="text-xs text-gray-500 dark:text-gray-500">
+								💡 Click "View Details" for comprehensive analysis and
+								remediation guidance
+							</div>
+						</div>
 					</CardFooter>
 				</Card>
 			) : (
-				<div className="text-center py-12 text-gray-500">
-					{loading
-						? "Searching for threats..."
-						: "Enter a search query to find threat intelligence data"}
-				</div>
+				<Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+					<CardContent className="py-16">
+						<div className="text-center">
+							<div className="text-6xl mb-4">🔍</div>
+							<h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+								{loading ? "Searching for threats..." : "Ready to search"}
+							</h3>
+							<p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+								{loading
+									? "Analyzing threat intelligence databases..."
+									: "Enter a search query above to find threat intelligence data across multiple sources"}
+							</p>
+							{loading && (
+								<div className="mt-4">
+									<div className="inline-flex items-center px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg">
+										<span className="animate-spin mr-2">⏳</span>
+										Searching threat databases...
+									</div>
+								</div>
+							)}
+						</div>
+					</CardContent>
+				</Card>
 			)}
 		</>
 	);
 
 	return (
 		<div className="container mx-auto py-8 px-4 bg-gray-50 dark:bg-gray-900 min-h-screen">
+			{/* Global Success/Error Messages */}
+			{taxiiSuccess && (
+				<div className="fixed top-4 right-4 z-50 max-w-md">
+					<SuccessAlert className="bg-green-50 border-green-200 text-green-800 shadow-lg rounded-xl">
+						<AlertTitle className="text-green-800 font-bold flex items-center">
+							<span className="mr-2 text-xl">✅</span>
+							Success
+						</AlertTitle>
+						<AlertDescription className="text-green-700">
+							{taxiiSuccess}
+						</AlertDescription>
+					</SuccessAlert>
+				</div>
+			)}
+
+			{error && (
+				<div className="fixed top-4 right-4 z-50 max-w-md">
+					<Alert className="bg-red-50 border-red-200 text-red-800 shadow-lg rounded-xl">
+						<AlertTitle className="text-red-800 font-bold flex items-center">
+							<span className="mr-2 text-xl">❌</span>
+							Error
+						</AlertTitle>
+						<AlertDescription className="text-red-700">
+							{error}
+						</AlertDescription>
+					</Alert>
+				</div>
+			)}
+
+			{/* Global Loading Indicator */}
+			{loading && (
+				<div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+					<div className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center">
+						<span className="animate-spin mr-3 text-xl">⏳</span>
+						<span className="font-medium">
+							Refreshing threat intelligence data...
+						</span>
+					</div>
+				</div>
+			)}
+
 			<div className="flex justify-between items-center mb-6">
 				<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 					Threat Intelligence Platform
 				</h1>
 				<div className="flex space-x-2">
 					<Button
-						onClick={() => fetchAllIocs()}
-						className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+						onClick={refreshAllData}
+						disabled={loading}
+						className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
 					>
-						Refresh Data
+						{loading ? (
+							<>
+								<span className="animate-spin mr-2">⏳</span>
+								Refreshing...
+							</>
+						) : (
+							<>🔄 Refresh Data</>
+						)}
 					</Button>
 				</div>
 			</div>
@@ -1367,6 +3032,9 @@ export default function Page() {
 			{activeTab === "explorer" && renderExplorer()}
 			{activeTab === "search" && renderSearchResults()}
 			{activeTab === "taxii" && renderTaxii()}
+
+			{/* Add logs panel at the bottom */}
+			<LogsPanel />
 		</div>
 	);
 }

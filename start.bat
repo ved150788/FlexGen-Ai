@@ -19,7 +19,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 :: Install Python requirements if needed
 echo Installing Python requirements...
-python -m pip install -r app/tools/threat_intel_platform/requirements.txt
+python -m pip install -r requirements.txt
 
 :: Install .env file if it doesn't exist
 if not exist .env (
@@ -29,11 +29,11 @@ if not exist .env (
 
 :: Start Flask backend
 echo Starting Flask backend...
-start cmd /k "python app/tools/threat_intel_platform/app.py"
+start cmd /k "python api_server.py"
 
 :: Start Next.js frontend
 echo Starting Next.js frontend...
-start cmd /k "npm run dev"
+start cmd /k "npx next dev"
 
 echo Threat Intelligence Platform is starting up.
 echo - Frontend will be available at: http://localhost:3000/tools/threat-intelligence

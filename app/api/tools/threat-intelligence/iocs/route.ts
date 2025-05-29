@@ -19,9 +19,9 @@ export async function GET(request: NextRequest) {
 			queryParams.append("timeRange", timeFilter);
 		queryParams.append("limit", limit);
 
-		// Call the Flask backend API
+		// Call the Flask backend API - use the correct endpoint
 		const backendUrl = process.env.FLASK_BACKEND_URL || "http://localhost:5000";
-		const url = `${backendUrl}/api/iocs?${queryParams.toString()}`;
+		const url = `${backendUrl}/api/tools/threat-intelligence/iocs/?${queryParams.toString()}`;
 
 		try {
 			const response = await fetch(url, {
@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
 				const data = await response.json();
 				return NextResponse.json(data);
 			} else {
-				console.error("Backend returned error:", await response.text());
+				console.error(
+					"Backend returned error:",
+					response.status,
+					await response.text()
+				);
 				// Return mock data if backend returns an error
 				return NextResponse.json(getMockIocData());
 			}

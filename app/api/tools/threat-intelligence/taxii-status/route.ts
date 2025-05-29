@@ -2,24 +2,27 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
 	try {
-		// Call the Flask backend API
+		// Call the Flask backend API with the new endpoint
 		const backendUrl = process.env.FLASK_BACKEND_URL || "http://localhost:5000";
 
 		try {
-			const response = await fetch(`${backendUrl}/api/taxii/status`, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				cache: "no-store", // Ensure we always get fresh data
-			});
+			const response = await fetch(
+				`${backendUrl}/api/tools/threat-intelligence/taxii-status/`,
+				{
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					cache: "no-store", // Ensure we always get fresh data
+				}
+			);
 
 			if (response.ok) {
 				const data = await response.json();
 				return NextResponse.json(data);
 			} else {
 				console.error("Backend returned error:", await response.text());
-				// Return enhanced mock data with AlienVault OTX API details
+				// Return enhanced mock data with multiple feeds
 				return NextResponse.json(getMockTaxiiData());
 			}
 		} catch (error) {
@@ -35,60 +38,74 @@ export async function GET() {
 
 function getMockTaxiiData() {
 	const currentDate = new Date();
-	const yesterdayDate = new Date(currentDate);
-	yesterdayDate.setDate(currentDate.getDate() - 1);
 
-	// Use real TAXII feed URLs in the mock data including AlienVault OTX
+	// Return data in the new format expected by the frontend
 	return {
-		status: "success",
-		taxiSources: [
+		connected: true,
+		lastSync: currentDate.toISOString(),
+		totalFeeds: 5,
+		activeFeeds: 5,
+		collections: [
 			{
+				id: "mitre-attack",
 				name: "MITRE ATT&CK",
-				url: "https://cti-taxii.mitre.org/taxii/",
-				collection: "enterprise-attack",
-				iocCount: 1247,
-				lastUpdated: yesterdayDate.toISOString(),
-			},
-			{
-				name: "AlienVault OTX",
-				url: "https://otx.alienvault.com/api/v1/indicators/export",
-				collection: "Direct API",
-				iocCount: 2156,
+				description: "Techniques, tactics, procedures of APTs",
+				status: "active",
+				indicators: 50,
 				lastUpdated: currentDate.toISOString(),
+				format: "STIX 2.1",
+				version: "2.1",
+				authRequired: false,
+				url: "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
 			},
 			{
-				name: "Anomali LIMO",
-				url: "https://limo.anomali.com/taxii/",
-				collection: "public",
-				iocCount: 735,
-				lastUpdated: yesterdayDate.toISOString(),
+				id: "anomali-limo",
+				name: "Anomali Limo",
+				description: "Public CTI feed with APTs, malware, campaigns",
+				status: "active",
+				indicators: 4,
+				lastUpdated: currentDate.toISOString(),
+				format: "STIX 1.1",
+				version: "1.1",
+				authRequired: true,
+				url: "https://limo.anomali.com/api/v1/taxii/taxii-discovery-service",
+			},
+			{
+				id: "hail-taxii",
+				name: "Hail a TAXII",
+				description: "Test and demo TAXII server with sample indicators",
+				status: "active",
+				indicators: 3,
+				lastUpdated: currentDate.toISOString(),
+				format: "STIX 1.1",
+				version: "1.1",
+				authRequired: false,
+				url: "http://hailataxii.com/taxii-discovery-service",
+			},
+			{
+				id: "misp-community",
+				name: "MISP Community",
+				description: "Community MISP instances with TAXII feeds",
+				status: "active",
+				indicators: 3,
+				lastUpdated: currentDate.toISOString(),
+				format: "STIX 2.1",
+				version: "2.1",
+				authRequired: false,
+				url: "https://www.misp-project.org/feeds/",
+			},
+			{
+				id: "eclecticiq-demo",
+				name: "EclecticIQ Demo Feed",
+				description: "CTI feeds curated for demo and learning",
+				status: "active",
+				indicators: 2,
+				lastUpdated: currentDate.toISOString(),
+				format: "STIX 2.1",
+				version: "2.1",
+				authRequired: false,
+				url: "https://github.com/eclecticiq/threat-intel-samples",
 			},
 		],
-		recentRuns: [
-			{
-				timestamp: currentDate.toISOString(),
-				status: "completed",
-				itemsAdded: 48,
-				itemsUpdated: 85,
-				feedName: "AlienVault OTX",
-				error: null,
-			},
-			{
-				timestamp: yesterdayDate.toISOString(),
-				status: "completed",
-				itemsAdded: 18,
-				itemsUpdated: 5,
-				feedName: "MITRE ATT&CK",
-				error: null,
-			},
-		],
-		apiStatus: {
-			alienVaultOtx: {
-				connected: true,
-				apiKeyConfigured: true,
-				apiKeyValid: true,
-				lastSuccessfulFetch: currentDate.toISOString(),
-			},
-		},
 	};
 }

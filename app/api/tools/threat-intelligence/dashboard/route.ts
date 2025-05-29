@@ -61,11 +61,11 @@ export async function GET() {
 					{ domain: "c2-server.net", count: 5 },
 				],
 				topIPs: [
-					{ ip: "192.168.1.1", count: 21 },
-					{ ip: "10.0.0.1", count: 15 },
-					{ ip: "172.16.0.1", count: 12 },
-					{ ip: "8.8.8.8", count: 8 },
-					{ ip: "1.1.1.1", count: 6 },
+					{ ip: "185.176.43.94", count: 18 },
+					{ ip: "23.32.246.157", count: 14 },
+					{ ip: "91.240.118.172", count: 11 },
+					{ ip: "45.142.213.33", count: 7 },
+					{ ip: "194.147.78.12", count: 5 },
 				],
 				threatsByType: [
 					{ type: "IP", count: 450 },
@@ -101,11 +101,11 @@ export async function GET() {
 					{ domain: "c2-server.net", count: 5 },
 				],
 				topIPs: [
-					{ ip: "192.168.1.1", count: 21 },
-					{ ip: "10.0.0.1", count: 15 },
-					{ ip: "172.16.0.1", count: 12 },
-					{ ip: "8.8.8.8", count: 8 },
-					{ ip: "1.1.1.1", count: 6 },
+					{ ip: "185.176.43.94", count: 18 },
+					{ ip: "23.32.246.157", count: 14 },
+					{ ip: "91.240.118.172", count: 11 },
+					{ ip: "45.142.213.33", count: 7 },
+					{ ip: "194.147.78.12", count: 5 },
 				],
 				threatsByType: [
 					{ type: "IP", count: 450 },
