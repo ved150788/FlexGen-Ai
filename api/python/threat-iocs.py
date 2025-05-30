@@ -5,6 +5,66 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime, timedelta
 
+# Add the current directory to the path to import our database utilities
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
+try:
+    from database_utils import get_iocs_with_pagination, fetch_live_threat_data
+except ImportError:
+    # Fallback if import fails
+    def get_iocs_with_pagination(page=1, limit=10, threat_type=None, source=None):
+        mock_iocs = [
+            {
+                "id": 1,
+                "indicator": "192.168.1.100",
+                "type": "ip",
+                "threat_score": 8.5,
+                "source": "ThreatFox",
+                "description": "Malicious IP address associated with botnet activity",
+                "created_at": "2024-01-15T10:30:00Z",
+                "last_seen": "2024-01-15T14:22:00Z",
+                "tags": ["network", "infrastructure", "botnet"],
+                "external_links": [
+                    {"name": "VirusTotal", "url": f"https://www.virustotal.com/gui/ip-address/192.168.1.100"},
+                    {"name": "AbuseIPDB", "url": f"https://www.abuseipdb.com/check/192.168.1.100"}
+                ]
+            },
+            {
+                "id": 2,
+                "indicator": "malicious-site.com",
+                "type": "domain",
+                "threat_score": 9.2,
+                "source": "AlienVault OTX",
+                "description": "Domain used for phishing campaigns targeting financial institutions",
+                "created_at": "2024-01-15T09:15:00Z",
+                "last_seen": "2024-01-15T15:45:00Z",
+                "tags": ["network", "dns", "phishing"],
+                "external_links": [
+                    {"name": "VirusTotal", "url": f"https://www.virustotal.com/gui/domain/malicious-site.com"},
+                    {"name": "URLVoid", "url": f"https://www.urlvoid.com/scan/malicious-site.com"}
+                ]
+            }
+        ]
+        
+        # Apply filters
+        filtered_iocs = mock_iocs
+        if threat_type:
+            filtered_iocs = [ioc for ioc in filtered_iocs if ioc['type'] == threat_type]
+        if source:
+            filtered_iocs = [ioc for ioc in filtered_iocs if source.lower() in ioc['source'].lower()]
+        
+        return {
+            "iocs": filtered_iocs,
+            "total": len(filtered_iocs),
+            "page": page,
+            "limit": limit,
+            "total_pages": 1
+        }
+    
+    def fetch_live_threat_data():
+        return False
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
@@ -23,100 +83,22 @@ class handler(BaseHTTPRequestHandler):
             if len(url_parts) > 1:
                 query_params = urllib.parse.parse_qs(url_parts[1])
             
-            # Mock IOCs data for demonstration
-            mock_iocs = [
-                {
-                    "id": 1,
-                    "indicator": "192.168.1.100",
-                    "type": "ip",
-                    "threat_score": 8.5,
-                    "source": "ThreatFox",
-                    "description": "Malicious IP address associated with botnet activity",
-                    "created_at": "2024-01-15T10:30:00Z",
-                    "last_seen": "2024-01-15T14:22:00Z",
-                    "tags": ["network", "infrastructure", "botnet"],
-                    "external_links": [
-                        {"name": "VirusTotal", "url": f"https://www.virustotal.com/gui/ip-address/192.168.1.100"},
-                        {"name": "AbuseIPDB", "url": f"https://www.abuseipdb.com/check/192.168.1.100"}
-                    ]
-                },
-                {
-                    "id": 2,
-                    "indicator": "malicious-site.com",
-                    "type": "domain",
-                    "threat_score": 9.2,
-                    "source": "AlienVault OTX",
-                    "description": "Domain used for phishing campaigns targeting financial institutions",
-                    "created_at": "2024-01-15T09:15:00Z",
-                    "last_seen": "2024-01-15T15:45:00Z",
-                    "tags": ["network", "dns", "phishing"],
-                    "external_links": [
-                        {"name": "VirusTotal", "url": f"https://www.virustotal.com/gui/domain/malicious-site.com"},
-                        {"name": "URLVoid", "url": f"https://www.urlvoid.com/scan/malicious-site.com"}
-                    ]
-                },
-                {
-                    "id": 3,
-                    "indicator": "d41d8cd98f00b204e9800998ecf8427e",
-                    "type": "hash",
-                    "threat_score": 7.8,
-                    "source": "CISA",
-                    "description": "MD5 hash of known ransomware payload",
-                    "created_at": "2024-01-15T08:00:00Z",
-                    "last_seen": "2024-01-15T16:30:00Z",
-                    "tags": ["file", "malware", "ransomware"],
-                    "external_links": [
-                        {"name": "VirusTotal", "url": f"https://www.virustotal.com/gui/file/d41d8cd98f00b204e9800998ecf8427e"},
-                        {"name": "Hybrid Analysis", "url": f"https://www.hybrid-analysis.com/search?query=d41d8cd98f00b204e9800998ecf8427e"}
-                    ]
-                },
-                {
-                    "id": 4,
-                    "indicator": "phishing-bank.net",
-                    "type": "domain",
-                    "threat_score": 9.5,
-                    "source": "PhishTank",
-                    "description": "Domain hosting banking credential phishing page",
-                    "created_at": "2024-01-15T07:45:00Z",
-                    "last_seen": "2024-01-15T17:20:00Z",
-                    "tags": ["network", "dns", "phishing", "banking"],
-                    "external_links": [
-                        {"name": "VirusTotal", "url": f"https://www.virustotal.com/gui/domain/phishing-bank.net"},
-                        {"name": "URLVoid", "url": f"https://www.urlvoid.com/scan/phishing-bank.net"}
-                    ]
-                }
-            ]
-            
             # Handle different query parameters for filtering/pagination
             page = int(query_params.get('page', ['1'])[0])
             limit = int(query_params.get('limit', ['10'])[0])
             threat_type = query_params.get('type', [None])[0]
             source = query_params.get('source', [None])[0]
             
-            # Filter by type if specified
-            filtered_iocs = mock_iocs
-            if threat_type:
-                filtered_iocs = [ioc for ioc in filtered_iocs if ioc['type'] == threat_type]
+            # Try to fetch live threat data first
+            fetch_live_threat_data()
             
-            # Filter by source if specified
-            if source:
-                filtered_iocs = [ioc for ioc in filtered_iocs if source.lower() in ioc['source'].lower()]
+            # Get IOCs from database with pagination
+            response_data = get_iocs_with_pagination(page, limit, threat_type, source)
             
-            # Pagination
-            start_idx = (page - 1) * limit
-            end_idx = start_idx + limit
-            paginated_iocs = filtered_iocs[start_idx:end_idx]
-            
-            response_data = {
-                "iocs": paginated_iocs,
-                "total": len(filtered_iocs),
-                "page": page,
-                "limit": limit,
-                "total_pages": (len(filtered_iocs) + limit - 1) // limit,
-                "filters": {
-                    "type": threat_type,
-                    "source": source
-                }
+            # Add filters to response
+            response_data["filters"] = {
+                "type": threat_type,
+                "source": source
             }
             
             # Write the response

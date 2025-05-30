@@ -2,134 +2,94 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
 	try {
-		// Call the Flask backend API
-		const backendUrl = process.env.FLASK_BACKEND_URL || "http://localhost:5000";
+		// Use the new serverless Python function endpoint with proper URL detection
+		const baseUrl = process.env.VERCEL_URL
+			? `https://${process.env.VERCEL_URL}`
+			: process.env.NODE_ENV === "production"
+			? "https://flexgenai-ved150788s-projects.vercel.app"
+			: "http://localhost:3000";
 
 		try {
-			// Make multiple attempts to connect to the backend
-			let attempts = 0;
-			const maxAttempts = 3;
-			let lastError = null;
+			const response = await fetch(`${baseUrl}/api/threat/dashboard`, {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				// Add a timeout to prevent hanging requests
+				signal: AbortSignal.timeout(10000),
+			});
 
-			while (attempts < maxAttempts) {
-				try {
-					const response = await fetch(`${backendUrl}/api/dashboard`, {
-						method: "GET",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						// Add a timeout to prevent hanging requests
-						signal: AbortSignal.timeout(5000),
-					});
-
-					if (response.ok) {
-						const data = await response.json();
-						console.log("Successfully loaded real dashboard data");
-						return NextResponse.json(data);
-					}
-
-					// If response not OK, throw error to try again
-					throw new Error(`Backend responded with status: ${response.status}`);
-				} catch (err) {
-					lastError = err;
-					attempts++;
-					// Wait before retrying (exponential backoff)
-					if (attempts < maxAttempts) {
-						await new Promise((resolve) =>
-							setTimeout(resolve, 1000 * attempts)
-						);
-					}
-				}
+			if (response.ok) {
+				const data = await response.json();
+				console.log(
+					"Successfully loaded real dashboard data from serverless function"
+				);
+				return NextResponse.json(data);
 			}
 
-			// If we get here, all attempts failed
+			// If response not OK, throw error to use fallback
+			throw new Error(
+				`Serverless function responded with status: ${response.status}`
+			);
+		} catch (err) {
 			console.error(
-				"Failed to fetch real dashboard data after multiple attempts:",
-				lastError
+				"Failed to fetch dashboard data from serverless function:",
+				err
 			);
 			console.warn("Using mock threat intelligence data as fallback");
 
-			// Return mock data as fallback
+			// Return enhanced mock data as fallback with v42 features
 			return NextResponse.json({
-				totalThreats: 1247,
-				newThreats: 32,
+				totalThreats: 1847,
+				newThreats: 67,
+				highestRisk: 9.8,
 				topDomains: [
-					{ domain: "malicious-domain.com", count: 18 },
-					{ domain: "attacker-site.net", count: 12 },
-					{ domain: "phishing-campaign.org", count: 9 },
-					{ domain: "malware-distribution.com", count: 7 },
-					{ domain: "c2-server.net", count: 5 },
+					{ domain: "malicious-domain.com", count: 28 },
+					{ domain: "attacker-site.net", count: 22 },
+					{ domain: "phishing-campaign.org", count: 19 },
+					{ domain: "malware-distribution.com", count: 15 },
+					{ domain: "c2-server.net", count: 12 },
 				],
 				topIPs: [
-					{ ip: "185.176.43.94", count: 18 },
-					{ ip: "23.32.246.157", count: 14 },
-					{ ip: "91.240.118.172", count: 11 },
-					{ ip: "45.142.213.33", count: 7 },
-					{ ip: "194.147.78.12", count: 5 },
+					{ ip: "185.176.43.94", count: 35 },
+					{ ip: "23.32.246.157", count: 28 },
+					{ ip: "91.240.118.172", count: 24 },
+					{ ip: "45.142.213.33", count: 18 },
+					{ ip: "194.147.78.12", count: 15 },
 				],
 				threatsByType: [
-					{ type: "IP", count: 450 },
-					{ type: "Domain", count: 320 },
-					{ type: "URL", count: 280 },
-					{ type: "Hash", count: 170 },
-					{ type: "Email", count: 27 },
+					{ type: "IP", count: 680 },
+					{ type: "Domain", count: 520 },
+					{ type: "URL", count: 380 },
+					{ type: "Hash", count: 210 },
+					{ type: "Email", count: 57 },
 				],
 				sourceDistribution: [
-					{ source: "AlienVault OTX", count: 42 },
-					{ source: "MITRE ATT&CK", count: 23 },
-					{ source: "ThreatFox", count: 15 },
-					{ source: "MISP", count: 12 },
-					{ source: "VirusTotal", count: 8 },
+					{ source: "URLhaus", count: 420 },
+					{ source: "ThreatFox", count: 380 },
+					{ source: "MITRE ATT&CK", count: 290 },
+					{ source: "CISA KEV", count: 180 },
+					{ source: "DShield", count: 120 },
+					{ source: "OpenPhish", count: 90 },
 				],
-				mostActiveSource: "AlienVault OTX",
-				highestRiskScore: 9.8,
-				isMockData: true,
-			});
-		} catch (error) {
-			// Log the error and return mock data
-			console.error("Error connecting to backend:", error);
-			console.warn("Using mock threat intelligence data as fallback");
-
-			return NextResponse.json({
-				totalThreats: 1247,
-				newThreats: 32,
-				topDomains: [
-					{ domain: "malicious-domain.com", count: 18 },
-					{ domain: "attacker-site.net", count: 12 },
-					{ domain: "phishing-campaign.org", count: 9 },
-					{ domain: "malware-distribution.com", count: 7 },
-					{ domain: "c2-server.net", count: 5 },
+				recentActivity: [
+					{ time: "10:30", threats: 22 },
+					{ time: "11:00", threats: 18 },
+					{ time: "11:30", threats: 35 },
+					{ time: "12:00", threats: 28 },
+					{ time: "12:30", threats: 15 },
 				],
-				topIPs: [
-					{ ip: "185.176.43.94", count: 18 },
-					{ ip: "23.32.246.157", count: 14 },
-					{ ip: "91.240.118.172", count: 11 },
-					{ ip: "45.142.213.33", count: 7 },
-					{ ip: "194.147.78.12", count: 5 },
-				],
-				threatsByType: [
-					{ type: "IP", count: 450 },
-					{ type: "Domain", count: 320 },
-					{ type: "URL", count: 280 },
-					{ type: "Hash", count: 170 },
-					{ type: "Email", count: 27 },
-				],
-				sourceDistribution: [
-					{ source: "AlienVault OTX", count: 42 },
-					{ source: "MITRE ATT&CK", count: 23 },
-					{ source: "ThreatFox", count: 15 },
-					{ source: "MISP", count: 12 },
-					{ source: "VirusTotal", count: 8 },
-				],
-				mostActiveSource: "AlienVault OTX",
-				highestRiskScore: 9.8,
+				mostActiveSource: "URLhaus",
+				lastUpdate: new Date().toISOString(),
+				dataIngestionActive: true,
+				version: "42.0.0",
 				isMockData: true,
 			});
 		}
 	} catch (error) {
 		console.error("Error in threat intelligence dashboard:", error);
 		return NextResponse.json(
-			{ error: "Internal server error" },
+			{ error: "Internal server error", version: "42.0.0" },
 			{ status: 500 }
 		);
 	}

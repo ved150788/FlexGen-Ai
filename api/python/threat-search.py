@@ -1,6 +1,57 @@
 import json
 import urllib.parse
+import os
+import sys
 from http.server import BaseHTTPRequestHandler
+
+# Add the current directory to the path to import our database utilities
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
+try:
+    from database_utils import search_threats, fetch_live_threat_data
+except ImportError:
+    # Fallback if import fails
+    def search_threats(query, limit=10, offset=0):
+        # Mock search results based on query
+        all_threats = [
+            {
+                "id": 1,
+                "indicator": "192.168.1.100",
+                "type": "ip",
+                "threat_score": 8.5,
+                "source": "ThreatFox",
+                "description": "Malicious IP address associated with botnet activity"
+            },
+            {
+                "id": 2,
+                "indicator": "malicious-site.com",
+                "type": "domain",
+                "threat_score": 9.2,
+                "source": "AlienVault OTX",
+                "description": "Domain used for phishing campaigns targeting financial institutions"
+            }
+        ]
+        
+        if query:
+            filtered_threats = [
+                threat for threat in all_threats
+                if (query.lower() in threat['indicator'].lower() or
+                    query.lower() in threat['description'].lower() or
+                    query.lower() in threat['source'].lower() or
+                    query.lower() in threat['type'].lower())
+            ]
+        else:
+            filtered_threats = all_threats
+        
+        return {
+            "results": filtered_threats,
+            "total": len(filtered_threats),
+            "query": query
+        }
+    
+    def fetch_live_threat_data():
+        return False
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -21,71 +72,31 @@ class handler(BaseHTTPRequestHandler):
             
             # Get search query parameter
             search_query = query_params.get('q', [''])[0].lower()
+            limit = int(query_params.get('limit', ['10'])[0])
+            page = int(query_params.get('page', ['1'])[0])
+            offset = (page - 1) * limit
             
-            # Mock search results based on query
-            all_threats = [
-                {
-                    "id": 1,
-                    "indicator": "192.168.1.100",
-                    "type": "ip",
-                    "threat_score": 8.5,
-                    "source": "ThreatFox",
-                    "description": "Malicious IP address associated with botnet activity"
-                },
-                {
-                    "id": 2,
-                    "indicator": "malicious-site.com",
-                    "type": "domain",
-                    "threat_score": 9.2,
-                    "source": "AlienVault OTX",
-                    "description": "Domain used for phishing campaigns targeting financial institutions"
-                },
-                {
-                    "id": 3,
-                    "indicator": "d41d8cd98f00b204e9800998ecf8427e",
-                    "type": "hash",
-                    "threat_score": 7.8,
-                    "source": "CISA",
-                    "description": "MD5 hash of known ransomware payload"
-                },
-                {
-                    "id": 4,
-                    "indicator": "phishing-bank.net",
-                    "type": "domain",
-                    "threat_score": 9.5,
-                    "source": "PhishTank",
-                    "description": "Domain hosting banking credential phishing page"
-                }
-            ]
+            # Try to fetch live threat data first
+            fetch_live_threat_data()
             
-            # Filter results based on search query
-            if search_query:
-                filtered_threats = [
-                    threat for threat in all_threats
-                    if (search_query in threat['indicator'].lower() or
-                        search_query in threat['description'].lower() or
-                        search_query in threat['source'].lower() or
-                        search_query in threat['type'].lower())
-                ]
-            else:
-                filtered_threats = all_threats
+            # Perform search using real database
+            search_results = search_threats(search_query, limit, offset)
             
-            response_data = {
-                "results": filtered_threats,
-                "total": len(filtered_threats),
-                "query": search_query,
-                "suggestions": [
+            # Add suggestions for empty queries
+            if not search_query:
+                search_results["suggestions"] = [
                     "malicious",
                     "phishing",
                     "botnet",
                     "ransomware",
                     "ip address",
                     "domain"
-                ] if not search_query else []
-            }
+                ]
+            else:
+                search_results["suggestions"] = []
             
             # Write the response
-            self.wfile.write(json.dumps(response_data).encode())
+            self.wfile.write(json.dumps(search_results).encode())
             
         except Exception as e:
             self.send_response(500)

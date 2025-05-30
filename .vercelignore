@@ -12,3 +12,27 @@ scripts/
 *.log
 .DS_Store
 Thumbs.db
+
+# Large files and directories to exclude
+backend/
+flask-email-backend/
+instance/
+data/
+test-package/
+*.db
+*.sqlite
+*.sqlite3
+threat_intel.db
+taxii_feeds.py
+api_server.py
+init_threat_db.py
+run_threat_intel.py
+test_*.py
+*.bat
+*.sh
+start.*
+README_*.md
+THREAT_INTEL_SETUP.md
+structure.txt
+package-lock.json
+tsconfig.tsbuildinfo

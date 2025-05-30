@@ -20,6 +20,10 @@
 		{
 			"source": "/api/threat/taxii-status",
 			"destination": "/api/python/taxii-status"
+		},
+		{
+			"source": "/api/threat/refresh-feeds",
+			"destination": "/api/python/refresh-feeds"
 		}
 	]
 }
