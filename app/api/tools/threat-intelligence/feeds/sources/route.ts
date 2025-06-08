@@ -2,40 +2,36 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
 	try {
-		// Call the backend TAXII status endpoint to get feed information
+		// Call the Flask backend API directly
 		const backendUrl = process.env.FLASK_BACKEND_URL || "http://localhost:5000";
 
-		const response = await fetch(`${backendUrl}/api/taxii-status`, {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			cache: "no-store", // Ensure we always get fresh data
-		});
+		const response = await fetch(
+			`${backendUrl}/api/tools/threat-intelligence/feeds/sources`,
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				cache: "no-store", // Ensure we always get fresh data
+			}
+		);
 
-		if (!response.ok) {
-			throw new Error(`Flask API error: ${response.status}`);
+		if (response.ok) {
+			const data = await response.json();
+			return NextResponse.json(data);
+		} else {
+			const errorText = await response.text();
+			console.error("Flask backend returned error:", errorText);
+			return NextResponse.json(
+				{
+					success: false,
+					sources: [],
+					totalSources: 0,
+					error: errorText,
+				},
+				{ status: response.status }
+			);
 		}
-
-		const statusData = await response.json();
-
-		// Convert feed status data to sources format expected by frontend
-		const sources = statusData.feeds
-			? statusData.feeds.map((feed: any) => ({
-					name: feed.name,
-					totalIndicators: feed.indicators_count || 0,
-					avgThreatScore: 7.5, // Default since not available in feed status
-					lastUpdated: feed.last_updated,
-					recentIndicators: Math.min(feed.indicators_count || 0, 10), // Approximate recent count
-					status: feed.status === "active" ? "active" : "inactive",
-			  }))
-			: [];
-
-		return NextResponse.json({
-			success: true,
-			sources: sources,
-			totalSources: sources.length,
-		});
 	} catch (error) {
 		console.error("Error proxying sources request:", error);
 		return NextResponse.json(

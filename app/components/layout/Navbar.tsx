@@ -18,6 +18,25 @@ const navItems = [
 // Add tools data with categories
 const toolsCategories = [
 	{
+		category: "Security Monitoring",
+		tools: [
+			{
+				name: "Security Dashboard",
+				href: "/security-dashboard",
+				icon: "📊",
+				featured: true,
+			},
+			{
+				name: "Threat Intelligence",
+				href: "/tools/threat-intelligence",
+			},
+			{
+				name: "Network Monitor",
+				href: "/tools/coming-soon?tool=Network Monitor",
+			},
+		],
+	},
+	{
 		category: "Security Assessment",
 		tools: [
 			{
@@ -27,18 +46,6 @@ const toolsCategories = [
 			{
 				name: "Password Manager",
 				href: "/tools/coming-soon?tool=Password Manager",
-			},
-			{
-				name: "Threat Intelligence",
-				href: "/tools/threat-intelligence",
-			},
-			{
-				name: "Security Dashboard",
-				href: "/tools/coming-soon?tool=Security Dashboard",
-			},
-			{
-				name: "Network Monitor",
-				href: "/tools/coming-soon?tool=Network Monitor",
 			},
 		],
 	},
@@ -172,7 +179,20 @@ export default function Navbar() {
 									</button>
 
 									{showToolsDropdown && (
-										<div className="absolute top-full right-0 mt-2 w-72 bg-white shadow-lg rounded-md py-1 z-50 text-black">
+										<div className="absolute top-full right-0 mt-2 w-80 bg-white shadow-lg rounded-md py-1 z-50 text-black">
+											{/* Security Dashboard - Featured Link */}
+											<Link
+												href="/security-dashboard"
+												className="block px-4 py-3 text-sm font-bold text-blue-600 hover:bg-blue-50 border-b border-gray-100 flex items-center bg-blue-10"
+												onClick={() => setShowToolsDropdown(false)}
+											>
+												<span className="text-lg mr-2">📊</span>
+												Security Dashboard
+												<span className="ml-auto text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+													Featured
+												</span>
+											</Link>
+
 											{/* Tools Dashboard Link */}
 											<Link
 												href="/tools"
@@ -193,7 +213,7 @@ export default function Navbar() {
 														d="M4 6h16M4 12h16M4 18h7"
 													/>
 												</svg>
-												Tools Dashboard
+												All Tools
 											</Link>
 											{toolsCategories.map((category, i) => (
 												<div key={i} className="mb-2">
@@ -205,9 +225,16 @@ export default function Navbar() {
 															<Link
 																key={tool.href}
 																href={tool.href}
-																className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+																className={`block px-4 py-2 text-sm hover:bg-gray-100 flex items-center ${
+																	tool.featured
+																		? "text-blue-600 font-medium"
+																		: "text-gray-700"
+																}`}
 																onClick={() => setShowToolsDropdown(false)}
 															>
+																{tool.icon && (
+																	<span className="mr-2">{tool.icon}</span>
+																)}
 																{tool.name}
 															</Link>
 														))}
@@ -284,6 +311,20 @@ export default function Navbar() {
 
 										{showToolsDropdown && (
 											<div className="pl-4 mt-2 space-y-4">
+												{/* Featured Security Dashboard Link */}
+												<div className="mb-2">
+													<Link
+														href="/security-dashboard"
+														className="flex items-center py-2 font-semibold text-blue-600"
+														onClick={() => setShowMobile(false)}
+													>
+														📊 Security Dashboard
+														<span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+															Featured
+														</span>
+													</Link>
+												</div>
+
 												{/* Mobile Tools Dashboard Link */}
 												<div className="mb-2">
 													<Link
@@ -305,7 +346,7 @@ export default function Navbar() {
 																d="M4 6h16M4 12h16M4 18h7"
 															/>
 														</svg>
-														Tools Dashboard
+														All Tools
 													</Link>
 												</div>
 												{toolsCategories.map((category, i) => (
@@ -318,9 +359,14 @@ export default function Navbar() {
 																<a
 																	key={tool.href}
 																	href={tool.href}
-																	className="block py-1 text-gray-700"
+																	className={`block py-1 ${
+																		tool.featured
+																			? "text-blue-600 font-medium"
+																			: "text-gray-700"
+																	}`}
 																>
-																	• {tool.name}
+																	• {tool.icon && `${tool.icon} `}
+																	{tool.name}
 																</a>
 															))}
 														</div>

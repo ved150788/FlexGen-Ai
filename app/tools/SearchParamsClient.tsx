@@ -49,10 +49,11 @@ const tools = [
 		id: "security-dashboard",
 		name: "Security Dashboard",
 		description:
-			"Comprehensive dashboard for monitoring your organization's security posture",
+			"Real-time aggregated view of your security posture from all tools",
 		category: "Monitoring",
-		status: "coming-soon",
+		status: "available",
 		icon: "📊",
+		beta: true,
 	},
 	{
 		id: "network-monitor",
@@ -203,57 +204,55 @@ export default function SearchParamsClient() {
 									)}
 								</div>
 							</div>
-							<h3 className="text-xl font-bold mb-2 text-gray-800">
+
+							<h3 className="text-xl font-semibold text-gray-900 mb-2">
 								{tool.name}
 							</h3>
-							<p className="text-gray-600 mb-4 text-sm min-h-[60px]">
-								{tool.description}
-							</p>
-							<div className="mt-4">
-								{tool.status === "coming-soon" ? (
+							<p className="text-gray-600 text-sm mb-4">{tool.description}</p>
+
+							<div className="flex items-center justify-between">
+								<span className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
+									{tool.category}
+								</span>
+
+								{tool.status === "available" ? (
+									<Link
+										href={
+											tool.id === "security-dashboard"
+												? "/security-dashboard"
+												: `/tools/${tool.id}`
+										}
+										className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+									>
+										Launch Tool
+									</Link>
+								) : (
 									<Link
 										href={`/tools/coming-soon?tool=${encodeURIComponent(
 											tool.name
 										)}`}
-										className="inline-block w-full text-center 
-                 bg-gray-800 text-white 
-                 py-2 px-4 rounded-md transition-colors duration-200 
-                 hover:bg-none hover:bg-black hover:text-white"
+										className="inline-flex items-center px-3 py-1.5 bg-gray-300 text-gray-600 text-sm font-medium rounded cursor-not-allowed"
 									>
-										Learn More
-									</Link>
-								) : (
-									<Link
-										href={`/tools/${tool.id}`}
-										className="inline-block w-full text-center 
-										bg-gray-800 text-white 
-										py-2 px-4 rounded-md transition-colors duration-200 
-										hover:bg-none hover:bg-black hover:text-white"
-									>
-										Launch Tool
+										Coming Soon
 									</Link>
 								)}
-							</div>
-
-							<div className="mt-4 text-xs text-gray-500">
-								Category: {tool.category}
 							</div>
 						</div>
 					</div>
 				))}
 			</div>
 
-			{/* No results message */}
+			{/* No tools found message */}
 			{filteredTools.length === 0 && (
-				<div className="text-center py-16">
-					<h3 className="text-xl font-semibold mb-2">No tools found</h3>
-					<p className="text-gray-600">No tools match the selected category.</p>
-					<button
-						onClick={() => setSelectedCategory("All Tools")}
-						className="mt-4 px-4 py-2 bg-primarySaffron text-black rounded-md"
-					>
-						View All Tools
-					</button>
+				<div className="text-center py-12">
+					<div className="text-gray-400 text-6xl mb-4">🔍</div>
+					<h3 className="text-xl font-semibold text-gray-900 mb-2">
+						No tools found
+					</h3>
+					<p className="text-gray-600">
+						Try selecting a different category or check back later for new
+						tools.
+					</p>
 				</div>
 			)}
 		</>

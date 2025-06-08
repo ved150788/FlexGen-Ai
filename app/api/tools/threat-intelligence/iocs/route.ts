@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 		const page = searchParams.get("page") || "1";
 		const limit = searchParams.get("limit") || "10";
 
-		// Build query string for serverless function
+		// Build query string for Flask backend
 		let queryParams = new URLSearchParams();
 		if (typeFilter && typeFilter !== "all")
 			queryParams.append("type", typeFilter);
@@ -21,140 +21,43 @@ export async function GET(request: NextRequest) {
 		queryParams.append("page", page);
 		queryParams.append("limit", limit);
 
-		// Use the new serverless Python function endpoint
-		const baseUrl = process.env.VERCEL_URL
-			? `https://${process.env.VERCEL_URL}`
-			: process.env.NODE_ENV === "production"
-			? "https://flexgenai-ved150788s-projects.vercel.app"
-			: "http://localhost:3000";
+		// Call the Flask backend API directly
+		const backendUrl = process.env.FLASK_BACKEND_URL || "http://localhost:5000";
+		const url = `${backendUrl}/api/tools/threat-intelligence/iocs/?${queryParams.toString()}`;
 
-		const url = `${baseUrl}/api/threat/iocs?${queryParams.toString()}`;
+		const response = await fetch(url, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			cache: "no-store", // Prevent caching to always get fresh data
+			signal: AbortSignal.timeout(30000), // 30 second timeout
+		});
 
-		try {
-			const response = await fetch(url, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				signal: AbortSignal.timeout(10000),
-				cache: "no-store", // Prevent caching to always get fresh data
-			});
-
-			if (response.ok) {
-				const data = await response.json();
-				console.log(
-					"Successfully loaded real IOC data from serverless function"
-				);
-				// Transform the serverless response to match frontend expectations
-				return NextResponse.json({
-					results: data.iocs || [],
-					pagination: {
-						page: data.page || 1,
-						limit: data.limit || parseInt(limit),
-						total: data.total || 0,
-						totalPages: data.total_pages || 0,
-						hasNextPage: (data.page || 1) < (data.total_pages || 0),
-						hasPrevPage: (data.page || 1) > 1,
-					},
-					filters: data.filters || {},
+		if (response.ok) {
+			const data = await response.json();
+			console.log("Successfully loaded real IOC data from Flask backend");
+			return NextResponse.json(data);
+		} else {
+			const errorText = await response.text();
+			console.error("Flask backend returned error:", errorText);
+			return NextResponse.json(
+				{
+					error: "Backend server error",
+					details: errorText,
 					version: "42.0.0",
-				});
-			} else {
-				console.error("Serverless function returned error:", response.status);
-				throw new Error(
-					`Serverless function responded with status: ${response.status}`
-				);
-			}
-		} catch (error) {
-			console.error("Error fetching IOCs from serverless function:", error);
-			console.warn("Using mock IOC data as fallback");
-
-			// Return enhanced mock data as fallback with v42 features
-			const mockIOCs = [
-				{
-					id: 1,
-					indicator: "192.168.1.100",
-					type: "ip",
-					threat_score: 8.5,
-					source: "ThreatFox",
-					description: "Malicious IP address associated with botnet activity",
-					created_at: new Date().toISOString(),
-					last_seen: new Date().toISOString(),
-					tags: ["network", "infrastructure", "botnet"],
-					external_links: [
-						{
-							name: "VirusTotal",
-							url: `https://www.virustotal.com/gui/ip-address/192.168.1.100`,
-						},
-						{
-							name: "AbuseIPDB",
-							url: `https://www.abuseipdb.com/check/192.168.1.100`,
-						},
-					],
 				},
-				{
-					id: 2,
-					indicator: "malicious-domain.com",
-					type: "domain",
-					threat_score: 9.2,
-					source: "URLhaus",
-					description: "Domain used for malware distribution campaigns",
-					created_at: new Date().toISOString(),
-					last_seen: new Date().toISOString(),
-					tags: ["network", "dns", "malware"],
-					external_links: [
-						{
-							name: "VirusTotal",
-							url: `https://www.virustotal.com/gui/domain/malicious-domain.com`,
-						},
-						{
-							name: "URLVoid",
-							url: `https://www.urlvoid.com/scan/malicious-domain.com`,
-						},
-					],
-				},
-				{
-					id: 3,
-					indicator: "T1055",
-					type: "technique",
-					threat_score: 7.5,
-					source: "MITRE ATT&CK",
-					description: "Process Injection technique used by adversaries",
-					created_at: new Date().toISOString(),
-					last_seen: new Date().toISOString(),
-					tags: ["technique", "process-injection", "mitre"],
-					external_links: [
-						{
-							name: "MITRE ATT&CK",
-							url: `https://attack.mitre.org/techniques/T1055/`,
-						},
-					],
-				},
-			];
-
-			return NextResponse.json({
-				results: mockIOCs,
-				pagination: {
-					page: parseInt(page),
-					limit: parseInt(limit),
-					total: mockIOCs.length,
-					totalPages: 1,
-					hasNextPage: false,
-					hasPrevPage: false,
-				},
-				filters: {
-					type: typeFilter,
-					source: sourceFilter,
-					timeRange: timeFilter,
-				},
-				version: "42.0.0",
-				isMockData: true,
-			});
+				{ status: response.status }
+			);
 		}
 	} catch (error) {
-		console.error("Error in IOCs listing:", error);
+		console.error("Error connecting to Flask backend:", error);
 		return NextResponse.json(
-			{ error: "Internal server error", version: "42.0.0" },
+			{
+				error: "Failed to connect to backend server",
+				details: error instanceof Error ? error.message : "Unknown error",
+				version: "42.0.0",
+			},
 			{ status: 500 }
 		);
 	}
