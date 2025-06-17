@@ -1,0 +1,37 @@
+Here are the complete **Git commands** to create (checkout) a new branch and push it to your remote (e.g., Bitbucket):
+
+---
+
+## ✅ Git Commands to Create & Push a New Branch
+
+```bash
+# Step 1: Create and switch to a new branch
+git checkout -b your-branch-name
+
+# Step 2: Add and commit your changes (if any)
+git add .
+git commit -m "Your commit message"
+
+# Step 3: Push the new branch to Bitbucket (or any remote)
+git push -u origin your-branch-name
+```
+
+---
+
+### 📝 Example
+
+```bash
+git checkout -b feature/login-page
+git add .
+git commit -m "Add login page UI"
+git push -u origin feature/login-page
+```
+
+---
+
+### 🧠 Explanation:
+
+* `git checkout -b`: Creates and switches to a new branch.
+* `git push -u origin`: Pushes the branch and sets it to track the remote branch for future `git push`/`git pull`.
+
+Let me know if you want to list branches or switch back to main/master.
